@@ -178,6 +178,7 @@ class Handler(BaseHTTPRequestHandler):
           '/vault/annotation/index.js':'sdk/annotation/src/index.js',
           '/vault/annotation/anchor.js':'sdk/annotation/src/anchor.js',
           '/vault/annotation/dom.js':'sdk/annotation/src/dom.js',
+          '/vault/annotation/colors.js':'sdk/annotation/src/colors.js',
           '/vault/annotation/vault-adapter.js':'sdk/annotation/examples/vault-adapter.js',
         }
         if asset in sdk_assets:

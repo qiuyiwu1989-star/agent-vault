@@ -24,7 +24,7 @@ export async function mountVaultAnnotations(container, path=location.pathname){
     document:{namespace:'vault',id:source.id,revision:source.hash},
     api:{
       list:()=>request(route),
-      create:(_,data)=>request(route,'POST',{...canonical(data),contentRevision:source.hash,comment:data.comment}),
+      create:(_,data)=>request(route,'POST',{...canonical(data),contentRevision:source.hash,comment:data.comment,color:data.color}),
       update:(_,note,data)=>request(route+'/'+encodeURIComponent(note.id),'PATCH',data),
     },
   });

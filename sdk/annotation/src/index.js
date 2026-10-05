@@ -1,44 +1,52 @@
 import { selectionAnchor, rangeFor } from './dom.js';
+import { COLORS, DEFAULT_COLOR, colorKey } from './colors.js';
 
-const SHELL = `<style>
-:host{all:initial;position:fixed;z-index:10000;right:18px;bottom:18px;font:14px/1.6 system-ui;color:#292623}*,*:before,*:after{box-sizing:border-box}button,textarea{font:inherit}button{border:1px solid #cfc7b6;background:#fff;color:#854530;border-radius:10px;padding:8px 12px;cursor:pointer}button:disabled{opacity:.6;cursor:wait}button:focus-visible,textarea:focus-visible{outline:2px solid #854530;outline-offset:2px}#panel{width:min(360px,calc(100vw - 36px));max-height:min(75vh,700px);overflow:auto;background:#fbfaf6;border:1px solid #cfc7b6;border-radius:18px;box-shadow:0 8px 35px #0002;padding:16px}#panel[hidden],#editor[hidden]{display:none}textarea{width:100%;min-height:90px;border:1px solid #cfc7b6;border-radius:10px;padding:9px}blockquote{white-space:pre-wrap;margin:10px 0;padding-left:9px;border-left:3px solid #dfbc64}article{border-top:1px solid #ded8cd;padding:10px 0}article p{margin:5px 0}#status{color:#62594e}#toggle{background:#854530;color:white;border-color:#854530}#close{float:right}
-</style><button id="toggle" aria-expanded="false">✎ 我的笔记</button><section id="panel" aria-label="文章笔记" hidden><button id="close" aria-label="收起笔记">收起</button><p id="status" role="status">选中正文即可划线或写笔记。</p><div id="editor" hidden><blockquote id="quote"></blockquote><textarea id="comment" aria-label="笔记内容" placeholder="写下想法；也可以只保存划线"></textarea><button id="save">保存</button><button id="cancel">取消</button></div><div id="list"></div></section>`;
+const PANEL = `<style>
+:host{all:initial;position:fixed;z-index:10000;right:18px;bottom:18px;font:14px/1.55 system-ui;color:#292623}*,*:before,*:after{box-sizing:border-box}button,textarea{font:inherit}button{border:1px solid #d6ccbc;background:#fff;color:#854530;border-radius:9px;padding:7px 11px;cursor:pointer}button:focus-visible,textarea:focus-visible{outline:2px solid #854530;outline-offset:2px}button:disabled{opacity:.6;cursor:wait}#toggle{background:#854530;color:#fff;border-color:#854530;box-shadow:0 4px 18px #0002}#panel{width:min(360px,calc(100vw - 36px));max-height:min(68vh,640px);overflow:auto;background:#fbfaf6;border:1px solid #d6ccbc;border-radius:18px;box-shadow:0 12px 40px #0002;padding:16px}#panel.expanded{width:min(520px,calc(100vw - 36px));max-height:82vh}#panel[hidden]{display:none}.head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.head strong{font-size:16px;margin-right:auto}#status{color:#685e53;margin:10px 0}article{border-top:1px solid #e1d9ce;padding:12px 0;cursor:pointer}article.selected{background:#f3eee5;border-radius:8px;padding:12px 8px}blockquote{margin:4px 0 6px;padding-left:10px;border-left:4px solid var(--note-color);white-space:pre-wrap}article p{margin:5px 0;white-space:pre-wrap}.meta{font-size:12px;color:#71665b}.swatch{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:5px;vertical-align:-1px;background:var(--note-color)}@media(max-width:600px){:host{right:10px;bottom:10px}#panel,#panel.expanded{width:calc(100vw - 20px);max-height:65vh}}
+</style><button id="toggle" aria-expanded="false">✎ 我的笔记</button><aside id="panel" aria-label="文章笔记" hidden><div class="head"><strong id="title">我的笔记</strong><button id="size" aria-label="展开笔记栏">展开</button><button id="close" aria-label="收起笔记栏">收起</button></div><p id="status" role="status">选中正文后可以划线和评注。</p><div id="list"></div></aside>`;
+const EDITOR = `<style>
+:host{all:initial;position:fixed;z-index:10001;font:14px/1.5 system-ui;color:#292623}*,*:before,*:after{box-sizing:border-box}#card{width:min(320px,calc(100vw - 24px));padding:13px;background:#fbfaf6;border:1px solid #d6ccbc;border-radius:14px;box-shadow:0 12px 34px #0003}#card[hidden]{display:none}.colors{display:flex;gap:8px;margin:10px 0}.color{width:28px;height:28px;padding:0;border-radius:50%;background:var(--sample);border:2px solid #fff;box-shadow:0 0 0 1px #9b9187;cursor:pointer}.color[aria-pressed=true]{box-shadow:0 0 0 2px #854530}.color:focus-visible,button:focus-visible,textarea:focus-visible{outline:2px solid #854530;outline-offset:2px}blockquote{margin:7px 0;padding-left:9px;border-left:3px solid #d6ccbc;white-space:pre-wrap;max-height:60px;overflow:auto}textarea{font:inherit;width:100%;min-height:72px;border:1px solid #d6ccbc;border-radius:9px;padding:8px;background:#fff;color:#292623}.actions{display:flex;gap:8px;margin-top:8px}button.action{font:inherit;border:1px solid #d6ccbc;background:#fff;color:#854530;border-radius:9px;padding:7px 12px;cursor:pointer}#save{background:#854530;color:#fff;border-color:#854530}button:disabled{opacity:.6}#error{color:#a13328;font-size:12px;margin:6px 0}@media(max-width:600px){:host{left:10px!important;top:auto!important;bottom:10px}#card{width:calc(100vw - 20px)}}
+</style><div id="card" hidden><strong id="heading">划线与评注</strong><blockquote id="quote"></blockquote><div class="colors" role="group" aria-label="划线颜色"></div><textarea id="comment" aria-label="评注内容" placeholder="写下想法；也可以只保存划线"></textarea><p id="error" role="alert" hidden></p><div class="actions"><button class="action" id="save">保存</button><button class="action" id="cancel">取消</button></div></div>`;
 
 /** Mount one annotation instance on one stable article container. */
 export async function mountAnnotations({ container, document: identity, api, locale = 'zh-CN', onSaved, onError }) {
   if (!(container instanceof Element) || !identity?.namespace || !identity?.id) throw new TypeError('container, document.namespace and document.id are required');
   for (const method of ['list','create','update']) if (typeof api?.[method] !== 'function') throw new TypeError(`api.${method} is required`);
   if (container.__annotationInstance) throw new Error('Annotations already mounted on this container');
-  const host = document.createElement('div'); host.setAttribute('data-annotation-sdk',''); host.setAttribute('lang',locale); host.attachShadow({ mode:'open' }); host.shadowRoot.innerHTML=SHELL; document.body.append(host);
-  const $=selector=>host.shadowRoot.querySelector(selector);
-  const id={ namespace:identity.namespace, documentId:identity.id, revision:identity.revision||null };
-  let notes=[], candidate=null, editing=null, destroyed=false, busy=false;
-  const highlightName='annotation-'+Math.random().toString(36).slice(2);
-  const highlightStyle=document.createElement('style');highlightStyle.textContent=`::highlight(${highlightName}){background:#f4dfa0;color:inherit}`;document.head.append(highlightStyle);
-  const status=t=>{if(!destroyed)$('#status').textContent=t};
-  const fail=e=>{status(e.message||'操作失败');onError?.(e)};
-  const show=visible=>{$('#panel').hidden=!visible;$('#toggle').setAttribute('aria-expanded',String(visible))};
-  function draw() {
-    const list=$('#list');list.replaceChildren();
-    for(const note of notes){const article=document.createElement('article'),q=document.createElement('blockquote'),p=document.createElement('p'),button=document.createElement('button');q.textContent=note.quote;p.textContent=note.comment||'仅划线';button.textContent='编辑笔记';button.onclick=()=>{editing=note;candidate=null;$('#quote').textContent=note.quote;$('#comment').value=note.comment||'';$('#editor').hidden=false;show(true)};article.append(q,p,button);list.append(article)}
-    if(window.CSS?.highlights && window.Highlight){const ranges=notes.filter(note=>note.anchor?.status!=='unresolved').map(note=>rangeFor(container,note.anchor||note)).filter(Boolean);CSS.highlights.set(highlightName,new Highlight(...ranges))}
+  const host=document.createElement('div'),bubble=document.createElement('div');
+  host.setAttribute('data-annotation-sdk','');bubble.setAttribute('data-annotation-editor','');host.lang=bubble.lang=locale;
+  host.attachShadow({mode:'open'}).innerHTML=PANEL;bubble.attachShadow({mode:'open'}).innerHTML=EDITOR;document.body.append(host,bubble);
+  const $=s=>host.shadowRoot.querySelector(s), E=s=>bubble.shadowRoot.querySelector(s);
+  const id={namespace:identity.namespace,documentId:identity.id,revision:identity.revision||null};
+  let notes=[],candidate=null,editing=null,chosen=DEFAULT_COLOR,destroyed=false,busy=false;
+  const names=Object.fromEntries(Object.keys(COLORS).map(key=>[key,'annotation-'+Math.random().toString(36).slice(2)]));
+  const style=document.createElement('style');style.textContent=Object.entries(COLORS).map(([key,meta])=>`::highlight(${names[key]}){background:${meta.value};color:inherit}`).join('\n');document.head.append(style);
+  function status(message){if(!destroyed)$('#status').textContent=message}
+  function fail(error){E('#error').textContent=error.message||'保存失败';E('#error').hidden=false;status(E('#error').textContent);onError?.(error)}
+  function showPanel(visible){$('#panel').hidden=!visible;$('#toggle').setAttribute('aria-expanded',String(visible))}
+  function position(rect){const width=Math.min(320,innerWidth-24),left=Math.max(12,Math.min(rect.left,innerWidth-width-12)),top=Math.max(12,Math.min(rect.bottom+10,innerHeight-280));bubble.style.left=left+'px';bubble.style.top=top+'px'}
+  function setColor(key){chosen=colorKey(key);for(const button of E('.colors').children)button.setAttribute('aria-pressed',String(button.dataset.color===chosen))}
+  for(const [key,meta] of Object.entries(COLORS)){const button=document.createElement('button');button.type='button';button.className='color';button.dataset.color=key;button.style.setProperty('--sample',meta.value);button.title=meta.label;button.setAttribute('aria-label',meta.label+'划线');button.onclick=()=>setColor(key);E('.colors').append(button)}
+  function openEditor(anchor,note,rect){candidate=anchor;editing=note;E('#heading').textContent=note?'编辑评注':'划线与评注';E('#quote').textContent=note?.quote||anchor.quote;E('#comment').value=note?.comment||'';E('#error').hidden=true;setColor(note?.color||DEFAULT_COLOR);position(rect);E('#card').hidden=false}
+  function draw(){
+    $('#title').textContent='我的笔记 · '+notes.length;const list=$('#list');list.replaceChildren();
+    for(const note of notes){const article=document.createElement('article'),quote=document.createElement('blockquote'),comment=document.createElement('p'),meta=document.createElement('div');
+      article.style.setProperty('--note-color',COLORS[colorKey(note.color)].value);quote.textContent=note.quote;comment.textContent=note.comment||'仅划线';meta.className='meta';meta.textContent=COLORS[colorKey(note.color)].label+'划线'+(note.anchor?.status==='unresolved'?' · 原文位置待确认':'');
+      article.append(quote,comment,meta);article.tabIndex=0;article.setAttribute('role','button');article.setAttribute('aria-label','查看划线并编辑评注');
+      article.onclick=()=>{const range=rangeFor(container,note.anchor||note);if(range){range.startContainer.parentElement?.scrollIntoView({behavior:'smooth',block:'center'});openEditor(null,note,range.getBoundingClientRect())}else{status('原文已变化，这条笔记无法准确定位；评注仍可编辑。');openEditor(null,note,article.getBoundingClientRect())}showPanel(true)};
+      article.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();article.click()}};list.append(article)}
+    if(window.CSS?.highlights&&window.Highlight){for(const name of Object.values(names))CSS.highlights.delete(name);for(const key of Object.keys(COLORS)){const ranges=notes.filter(note=>note.anchor?.status!=='unresolved'&&colorKey(note.color)===key).map(note=>rangeFor(container,note.anchor||note)).filter(Boolean);CSS.highlights.set(names[key],new Highlight(...ranges))}}
   }
-  async function refresh(){notes=await api.list(id);if(!Array.isArray(notes))throw new TypeError('api.list must return an array');if(!destroyed)draw();return notes}
-  async function capture(){if(destroyed||busy)return;const anchor=selectionAnchor(container);if(!anchor)return;candidate=anchor;editing=null;$('#quote').textContent=anchor.quote;$('#comment').value='';$('#editor').hidden=false;show(true);status('已选中正文，可以保存划线或写笔记。')}
-  const mouseup=()=>capture();const keyup=e=>{if(e.key==='Shift'||e.key==='ArrowLeft'||e.key==='ArrowRight')capture()};
-  const touchend=()=>requestAnimationFrame(capture);
-  const highlightClick=e=>{
-    if(!document.caretRangeFromPoint || window.getSelection()?.toString())return;
-    const caret=document.caretRangeFromPoint(e.clientX,e.clientY);
-    if(!caret)return;
-    const note=notes.find(n=>{const range=rangeFor(container,n.anchor||n);return range?.isPointInRange(caret.startContainer,caret.startOffset)});
-    if(note){editing=note;candidate=null;$('#quote').textContent=note.quote;$('#comment').value=note.comment||'';$('#editor').hidden=false;show(true)}
-  };
+  async function refresh(){const result=await api.list(id);if(!Array.isArray(result))throw new TypeError('api.list must return an array');notes=result;if(!destroyed)draw();return notes}
+  function capture(){if(destroyed||busy)return;const anchor=selectionAnchor(container);if(!anchor)return;openEditor(anchor,null,window.getSelection().getRangeAt(0).getBoundingClientRect())}
+  const mouseup=()=>capture(),keyup=e=>{if(e.key==='Shift'||e.key.startsWith('Arrow'))capture()},touchend=()=>requestAnimationFrame(capture);
+  const highlightClick=e=>{if(!document.caretRangeFromPoint||window.getSelection()?.toString())return;const caret=document.caretRangeFromPoint(e.clientX,e.clientY);if(!caret)return;const note=notes.find(n=>{const r=rangeFor(container,n.anchor||n);return r?.isPointInRange(caret.startContainer,caret.startOffset)});if(note){openEditor(null,note,rangeFor(container,note.anchor||note).getBoundingClientRect());showPanel(true)}};
   container.addEventListener('mouseup',mouseup);container.addEventListener('keyup',keyup);container.addEventListener('touchend',touchend);container.addEventListener('click',highlightClick);
-  $('#toggle').onclick=()=>show($('#panel').hidden);$('#close').onclick=()=>show(false);$('#cancel').onclick=()=>{$('#editor').hidden=true;candidate=null;editing=null};
-  $('#save').onclick=async()=>{if(busy||(!candidate&&!editing))return;busy=true;$('#save').disabled=true;try{const record=editing?await api.update(id,editing,{comment:$('#comment').value,expected:editing.version}):await api.create(id,{...candidate,comment:$('#comment').value});await refresh();$('#editor').hidden=true;candidate=null;editing=null;status('笔记已保存。');onSaved?.(record)}catch(e){fail(e)}finally{busy=false;if(!destroyed)$('#save').disabled=false}};
-  try{await refresh()}catch(e){fail(e)}
-  const instance={refresh,destroy(){if(destroyed)return;destroyed=true;container.removeEventListener('mouseup',mouseup);container.removeEventListener('keyup',keyup);container.removeEventListener('touchend',touchend);container.removeEventListener('click',highlightClick);window.CSS?.highlights?.delete(highlightName);highlightStyle.remove();host.remove();delete container.__annotationInstance}};
-  container.__annotationInstance=instance;
-  return instance;
+  $('#toggle').onclick=()=>showPanel($('#panel').hidden);$('#close').onclick=()=>showPanel(false);$('#size').onclick=()=>{const expanded=$('#panel').classList.toggle('expanded');$('#size').textContent=expanded?'缩小':'展开';$('#size').setAttribute('aria-label',expanded?'缩小笔记栏':'展开笔记栏')};E('#cancel').onclick=()=>{E('#card').hidden=true;candidate=null;editing=null};
+  E('#save').onclick=async()=>{if(busy||(!candidate&&!editing))return;busy=true;E('#save').disabled=true;try{const record=editing?await api.update(id,editing,{comment:E('#comment').value,color:chosen,expected:editing.version}):await api.create(id,{...candidate,comment:E('#comment').value,color:chosen});await refresh();E('#card').hidden=true;candidate=null;editing=null;window.getSelection()?.removeAllRanges();showPanel(true);status('笔记已保存。');onSaved?.(record)}catch(error){fail(error)}finally{busy=false;if(!destroyed)E('#save').disabled=false}};
+  try{await refresh()}catch(error){status(error.message||'笔记加载失败');onError?.(error)}
+  const instance={refresh,destroy(){if(destroyed)return;destroyed=true;container.removeEventListener('mouseup',mouseup);container.removeEventListener('keyup',keyup);container.removeEventListener('touchend',touchend);container.removeEventListener('click',highlightClick);for(const name of Object.values(names))window.CSS?.highlights?.delete(name);style.remove();host.remove();bubble.remove();delete container.__annotationInstance}};
+  container.__annotationInstance=instance;return instance;
 }
+
+export { COLORS, DEFAULT_COLOR, colorKey } from './colors.js';

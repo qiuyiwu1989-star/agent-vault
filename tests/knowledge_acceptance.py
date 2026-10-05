@@ -40,10 +40,10 @@ try:
     headers={'X-Test-Owner':owner,'Origin':p.ORIGIN,'X-Vault-Token':p.TOKEN,'Content-Type':'application/json'}
     with urlopen(Request(base+path,headers=headers,data=json.dumps(data).encode() if data is not None else None,method=method)) as r:return json.loads(r.read())
    assert owner_req('alice','/api/inside/annotations/v1/session')['owner']=='alice'
-   new=owner_req('alice',path,dict(start=a,end=b,quote=doc['text'][a:b],contentRevision=doc['hash'],comment='alice only'))
-   assert new['version']==1 and len(owner_req('alice',path))==1 and owner_req('bob',path)==[]
-   edited=owner_req('alice',path+'/'+new['id'],dict(expected=1,comment='updated'),method='PATCH')
-   assert edited['version']==2 and edited['comment']=='updated'
+   new=owner_req('alice',path,dict(start=a,end=b,quote=doc['text'][a:b],contentRevision=doc['hash'],comment='alice only',color='mint'))
+   assert new['version']==1 and new['color']=='mint' and len(owner_req('alice',path))==1 and owner_req('bob',path)==[]
+   edited=owner_req('alice',path+'/'+new['id'],dict(expected=1,comment='updated',color='coral'),method='PATCH')
+   assert edited['version']==2 and edited['comment']=='updated' and edited['color']=='coral'
    try:owner_req('bob',path+'/'+new['id'],dict(expected=2,comment='steal'),method='PATCH');raise AssertionError('cross-owner update accepted')
    except HTTPError as e:assert e.code==409
    try:owner_req('alice',path,dict(start=a,end=b,quote=doc['text'][a:b],contentRevision='old',comment='bad'));raise AssertionError('stale text accepted')

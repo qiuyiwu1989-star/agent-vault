@@ -3,6 +3,8 @@ import uuid
 from psycopg2.extras import Json
 from .knowledge import reanchor
 
+COLORS = ('yellow','coral','mint','blue','violet')
+
 class AnnotationError(ValueError):
     pass
 
@@ -37,22 +39,25 @@ class AnnotationStore:
         doc=self.document(namespace,document_id)
         start,end,quote=data.get('start'),data.get('end'),data.get('quote')
         comment=data.get('comment','')
+        color=data.get('color','yellow')
+        if color not in COLORS:raise AnnotationError('无效划线颜色')
         if type(start)!=int or type(end)!=int or not 0<=start<end<=len(doc['text']) or end-start>8000 or doc['text'][start:end]!=quote or data.get('contentRevision')!=doc['hash']:raise AnnotationError('正文或划线位置已变化，请重新选择')
         if not isinstance(comment,str) or len(comment)>10000:raise AnnotationError('笔记过长')
-        record=dict(start=start,end=end,quote=quote,prefix=doc['text'][max(0,start-40):start],suffix=doc['text'][end:end+40],content_hash=doc['hash'],comment=comment,visibility='private')
+        record=dict(start=start,end=end,quote=quote,prefix=doc['text'][max(0,start-40):start],suffix=doc['text'][end:end+40],content_hash=doc['hash'],comment=comment,color=color,visibility='private')
         ident=str(uuid.uuid4())
         with self.connect() as db,db.cursor() as c:
             c.execute('INSERT INTO web_annotations(id,namespace,document_id,owner_id,record) VALUES(%s,%s,%s,%s,%s)',(ident,namespace,document_id,owner,Json(record)))
         return next(item for item in self.list(owner,namespace,document_id) if item['id']==ident)
     def update(self, owner, namespace, document_id, ident, data):
         if not owner:raise AnnotationError('未登录')
-        comment=data.get('comment');version=data.get('expected')
+        comment=data.get('comment');version=data.get('expected');color=data.get('color','yellow')
+        if color not in COLORS:raise AnnotationError('无效划线颜色')
         if not isinstance(comment,str) or len(comment)>10000 or type(version)!=int:raise AnnotationError('笔记内容或版本无效')
         self.document(namespace,document_id)
         with self.connect() as db,db.cursor() as c:
-            c.execute('''UPDATE web_annotations SET record=jsonb_set(record,'{comment}',%s::jsonb),
+            c.execute('''UPDATE web_annotations SET record=jsonb_set(jsonb_set(record,'{comment}',%s::jsonb),'{color}',%s::jsonb),
               version=version+1,updated_at=now() WHERE id=%s AND owner_id=%s AND namespace=%s
               AND document_id=%s AND version=%s AND deleted_at IS NULL RETURNING id''',
-              (Json(comment),ident,owner,namespace,document_id,version))
+              (Json(comment),Json(color),ident,owner,namespace,document_id,version))
             if not c.fetchone():raise AnnotationError('笔记已变化或无权编辑，请刷新后重试')
         return next(item for item in self.list(owner,namespace,document_id) if item['id']==ident)
