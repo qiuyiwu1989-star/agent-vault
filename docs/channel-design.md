@@ -7,3 +7,7 @@
 生产备份：`/var/backups/agent-vault/20261005-102707-channel/files.tar.gz`。恢复时只恢复 `/opt/agent-vault` 和 nginx 片段，执行 nginx -t 后重启服务及 reload；本次未迁移数据库或覆盖文章。
 
 验证：23 个单元测试、隔离 PostgreSQL 的 knowledge_acceptance 和 production_acceptance 全通过；JavaScript 语法检查通过。正式 HTTPS 首页、四栏目、公开 BI、CSS/JS 均200且有预期模板/注入；catalog 返回真实摘要标签；私有 notes 与 MCP 未认证401。浏览器工具超时，真实桌面/手机视觉及交互未完成验收。
+
+## 导航修正
+
+2026-10-05：频道“个人工作台”统一进入 `/admin/dashboard.html`，Vault 属于个人后台的内容管理模块；后台工具网格增加 Vault 管理卡片，替代悬浮入口。各静态栏目直接加载带版本的共同导航脚本，不再依赖阅读按钮脚本间接加载；reader-link 路由支持查询版本。正式 HTTPS 四栏目已核实直接注入 v4，两个 JS 资源 MIME/200 正常。备份 `/var/backups/agent-vault/20261005-105939-navigation/`。实际浏览器视觉仍未验收。

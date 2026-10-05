@@ -144,7 +144,7 @@ LIBRARY="""<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="v
 class Handler(BaseHTTPRequestHandler):
     def reply(self,status,obj,ctype='application/json; charset=utf-8'):
         if isinstance(obj,str) and ctype.startswith('text/html') and '/vault/channel.js' not in obj:
-            assets='<link rel="stylesheet" href="/vault/channel.css?v=3" data-vault-theme="1"><script defer src="/vault/channel.js?v=3"></script>'
+            assets='<link rel="stylesheet" href="/vault/channel.css?v=4" data-vault-theme="1"><script defer src="/vault/channel.js?v=4"></script>'
             obj=obj.replace('</head>',assets+'</head>',1) if '</head>' in obj else obj.replace('</style>','</style>'+assets,1)
         b=(obj if isinstance(obj,str) else json.dumps(obj,ensure_ascii=False)).encode();self.send_response(status)
         for k,v in {'Content-Type':ctype,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','Content-Length':str(len(b))}.items():self.send_header(k,v)
@@ -166,7 +166,7 @@ class Handler(BaseHTTPRequestHandler):
         if urlsplit(self.path).path=='/api/vault-mcp':
             if not self.agent_allowed():return self.reply(401,{'error':'read-only credential required'})
             return self.reply(405,{'error':'SSE stream not offered; use POST'})
-        if self.path=='/vault/reader-link.js':return self.reply(200,(Path(__file__).parent/'web/reader-link.js').read_text(),'application/javascript; charset=utf-8')
+        if asset=='/vault/reader-link.js':return self.reply(200,(Path(__file__).parent/'web/reader-link.js').read_text(),'application/javascript; charset=utf-8')
         if self.path=='/vault/':return self.reply(200,(Path(__file__).parent/'web/channel.html').read_text(),'text/html; charset=utf-8')
         if self.path=='/vault/catalog.json':return self.reply(200,public_catalog())
         if not self.authenticated():return self.reply(401,{'error':'请先登录后台'})
