@@ -25,7 +25,8 @@ export function selectionAnchor(container, selection = window.getSelection()) {
 }
 export function rangeFor(container, anchor) {
   const { text, nodes } = textMap(container);
-  let at = locateAnchor(text, { ...anchor, start: null, end: null });
+  let at = locateAnchor(text, anchor);
+  if (at.status === 'unresolved') at = locateAnchor(text, { ...anchor, start: null, end: null });
   if (at.status === 'unresolved') at = locateAnchor(text, { quote: anchor.quote });
   if (at.status === 'unresolved') return null;
   function boundary(offset, end = false) {

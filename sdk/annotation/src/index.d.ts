@@ -23,6 +23,7 @@ export declare function mountAnnotations(options: {
   document: DocumentIdentity;
   api: AnnotationAPI;
   locale?: string;
+  modeLabel?: string;
   onSaved?: (record: AnnotationRecord) => void;
   onError?: (error: Error) => void;
 }): Promise<AnnotationInstance>;
