@@ -26,11 +26,19 @@ export async function mountAnnotations({ container, document: identity, api, loc
   async function refresh(){notes=await api.list(id);if(!Array.isArray(notes))throw new TypeError('api.list must return an array');if(!destroyed)draw();return notes}
   async function capture(){if(destroyed||busy)return;const anchor=selectionAnchor(container);if(!anchor)return;candidate=anchor;editing=null;$('#quote').textContent=anchor.quote;$('#comment').value='';$('#editor').hidden=false;show(true);status('已选中正文，可以保存划线或写笔记。')}
   const mouseup=()=>capture();const keyup=e=>{if(e.key==='Shift'||e.key==='ArrowLeft'||e.key==='ArrowRight')capture()};
-  container.addEventListener('mouseup',mouseup);container.addEventListener('keyup',keyup);
+  const touchend=()=>requestAnimationFrame(capture);
+  const highlightClick=e=>{
+    if(!document.caretRangeFromPoint || window.getSelection()?.toString())return;
+    const caret=document.caretRangeFromPoint(e.clientX,e.clientY);
+    if(!caret)return;
+    const note=notes.find(n=>{const range=rangeFor(container,n.anchor||n);return range?.isPointInRange(caret.startContainer,caret.startOffset)});
+    if(note){editing=note;candidate=null;$('#quote').textContent=note.quote;$('#comment').value=note.comment||'';$('#editor').hidden=false;show(true)}
+  };
+  container.addEventListener('mouseup',mouseup);container.addEventListener('keyup',keyup);container.addEventListener('touchend',touchend);container.addEventListener('click',highlightClick);
   $('#toggle').onclick=()=>show($('#panel').hidden);$('#close').onclick=()=>show(false);$('#cancel').onclick=()=>{$('#editor').hidden=true;candidate=null;editing=null};
   $('#save').onclick=async()=>{if(busy||(!candidate&&!editing))return;busy=true;$('#save').disabled=true;try{const record=editing?await api.update(id,editing,{comment:$('#comment').value,expected:editing.version}):await api.create(id,{...candidate,comment:$('#comment').value});await refresh();$('#editor').hidden=true;candidate=null;editing=null;status('笔记已保存。');onSaved?.(record)}catch(e){fail(e)}finally{busy=false;if(!destroyed)$('#save').disabled=false}};
   try{await refresh()}catch(e){fail(e)}
-  const instance={refresh,destroy(){if(destroyed)return;destroyed=true;container.removeEventListener('mouseup',mouseup);container.removeEventListener('keyup',keyup);window.CSS?.highlights?.delete(highlightName);highlightStyle.remove();host.remove();delete container.__annotationInstance}};
+  const instance={refresh,destroy(){if(destroyed)return;destroyed=true;container.removeEventListener('mouseup',mouseup);container.removeEventListener('keyup',keyup);container.removeEventListener('touchend',touchend);container.removeEventListener('click',highlightClick);window.CSS?.highlights?.delete(highlightName);highlightStyle.remove();host.remove();delete container.__annotationInstance}};
   container.__annotationInstance=instance;
   return instance;
 }
