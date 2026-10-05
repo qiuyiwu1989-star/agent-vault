@@ -6,15 +6,17 @@ from urllib.request import Request,urlopen
 from urllib.error import HTTPError
 from agent_vault import production as p
 from agent_vault.knowledge import Knowledge
+from agent_vault.annotations import AnnotationStore
 original=p.DSN;schema='knowledge_test_'+uuid.uuid4().hex
 with p.connect() as db,db.cursor() as c:c.execute('CREATE SCHEMA '+schema)
 try:
  with tempfile.TemporaryDirectory() as tmp:
-  p.ROOT=Path(tmp);p.DSN=original+' options=-csearch_path='+schema;p.KNOWLEDGE=Knowledge(p.connect,p.ROOT,p.ROOT/'builders.json')
+  p.ROOT=Path(tmp);p.DSN=original+' options=-csearch_path='+schema;p.KNOWLEDGE=Knowledge(p.connect,p.ROOT,p.ROOT/'builders.json');p.ANNOTATIONS=AnnotationStore(p.connect,{'vault':p.KNOWLEDGE.document})
   (p.ROOT/'reading').mkdir();f=p.ROOT/'reading/2026-10-05-note.html';f.write_text('<title>Reading</title><p>作者：叶军</p><p>重点😀正文。Agent 工作流值得讨论。</p>')
   p.init();doc=p.KNOWLEDGE.corpus()[0];a=doc['text'].index('重点');b=a+len('重点😀正文')
   class TestHandler(p.Handler):
    def authenticated(self):return self.headers.get('X-Test-Auth')=='yes'
+   def annotation_owner(self):return self.headers.get('X-Test-Owner')
    def agent_allowed(self):return self.headers.get('Authorization')=='Bearer test-read-only'
    def log_message(self,*args):pass
   server=ThreadingHTTPServer(('127.0.0.1',0),TestHandler);thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start();base='http://127.0.0.1:'+str(server.server_port)
@@ -33,6 +35,19 @@ try:
    for kwargs,expected in [({'auth':False},401),({'origin':'https://evil.invalid'},403),({'token':'wrong'},403)]:
     try:req('/api/inside/vault/knowledge/note-save',data,**kwargs);raise AssertionError('security gate missed')
     except HTTPError as e:assert e.code==expected
+   path='/api/inside/annotations/v1/documents/vault/'+doc['id']+'/annotations'
+   def owner_req(owner,path,data=None,method=None,**kwargs):
+    headers={'X-Test-Owner':owner,'Origin':p.ORIGIN,'X-Vault-Token':p.TOKEN,'Content-Type':'application/json'}
+    with urlopen(Request(base+path,headers=headers,data=json.dumps(data).encode() if data is not None else None,method=method)) as r:return json.loads(r.read())
+   assert owner_req('alice','/api/inside/annotations/v1/session')['owner']=='alice'
+   new=owner_req('alice',path,dict(start=a,end=b,quote=doc['text'][a:b],contentRevision=doc['hash'],comment='alice only'))
+   assert new['version']==1 and len(owner_req('alice',path))==1 and owner_req('bob',path)==[]
+   edited=owner_req('alice',path+'/'+new['id'],dict(expected=1,comment='updated'),method='PATCH')
+   assert edited['version']==2 and edited['comment']=='updated'
+   try:owner_req('bob',path+'/'+new['id'],dict(expected=2,comment='steal'),method='PATCH');raise AssertionError('cross-owner update accepted')
+   except HTTPError as e:assert e.code==409
+   try:owner_req('alice',path,dict(start=a,end=b,quote=doc['text'][a:b],contentRevision='old',comment='bad'));raise AssertionError('stale text accepted')
+   except HTTPError as e:assert e.code==409
    f.write_text('<title>Reading</title><p>新增前言</p><p>作者：叶军</p><p>重点😀正文。Agent 工作流值得讨论。</p>')
    notes=p.KNOWLEDGE.notes(doc['id']);assert notes[0]['anchor']['status']=='relocated'
    try:p.KNOWLEDGE.note_save(data);raise AssertionError('stale anchor accepted')
@@ -45,7 +60,7 @@ try:
    msg.update(method='tools/call',params={'name':'vault_read','arguments':{'id':doc['id']}})
    _,raw=req('/api/vault-mcp',msg,auth=False,extra={'Authorization':'Bearer test-read-only'});assert '修订评论' not in raw.decode();assert 'private_notes' not in raw.decode()
    assert 'private_notes' not in p.KNOWLEDGE.pack([doc['id']]);assert p.KNOWLEDGE.pack([doc['id']],True)['private_notes']
-   print('PASS: reader/BI/brief HTML, Unicode annotation persistence/edit, unauthenticated/CSRF denial, stale anchor protection, reanchor, analytics, entity aliases, brief storage, MCP initialize/read and private-note exclusion')
+   print('PASS: reader/BI/brief HTML, Unicode annotation persistence/edit, owner-isolated SDK annotations, stale and cross-owner denial, CSRF denial, reanchor, analytics, brief and private-note exclusion')
   finally:server.shutdown();server.server_close()
 finally:
  p.DSN=original

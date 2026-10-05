@@ -8,6 +8,7 @@ from urllib.error import HTTPError
 import psycopg2
 from psycopg2.extras import Json
 from .admin import ADMIN
+from .annotations import AnnotationStore, AnnotationError
 from .channel import render_channel
 from .core import page, render_body
 from .knowledge import Knowledge
@@ -34,10 +35,11 @@ def atomic(p,b):
 
 def connect():return psycopg2.connect(DSN)
 KNOWLEDGE=Knowledge(connect,ROOT,os.environ.get("VAULT_BUILDERS_INDEX","/var/www/html/data/ai-builders-digest/index.json"))
+ANNOTATIONS=AnnotationStore(connect,{"vault": lambda ident: (lambda d: d if d["kind"]=="fulltext" and d["url"].startswith("/vault/") else None)(KNOWLEDGE.document(ident))})
 def init():
     with connect() as db,db.cursor() as c:
         c.execute('CREATE TABLE IF NOT EXISTS documents(id text PRIMARY KEY,path text UNIQUE NOT NULL,published integer NOT NULL DEFAULT 0); CREATE TABLE IF NOT EXISTS revisions(id text REFERENCES documents(id),revision integer,record jsonb NOT NULL,created timestamptz DEFAULT now(),PRIMARY KEY(id,revision)); CREATE TABLE IF NOT EXISTS publications(id bigserial PRIMARY KEY,document text,revision integer,before_bytes bytea,after_hash text,state text,created timestamptz DEFAULT now());')
-    scan();KNOWLEDGE.init()
+    scan();KNOWLEDGE.init();ANNOTATIONS.init()
 def scan():
     with LOCK,connect() as db,db.cursor() as c:
         c.execute('SELECT pg_advisory_xact_lock(5095001)')
@@ -154,6 +156,17 @@ class Handler(BaseHTTPRequestHandler):
             req=Request('http://127.0.0.1:5050/api/inside/verify',headers={'Cookie':self.headers.get('Cookie',''),'Authorization':self.headers.get('Authorization','')})
             with urlopen(req,timeout=5) as r:return r.status==200
         except Exception:return False
+    def annotation_owner(self):
+        # Only a signed human session identifies the owner; automation Bearer access cannot.
+        req=Request('http://127.0.0.1:5050/api/inside/whoami',headers={'Cookie':self.headers.get('Cookie','')})
+        try:
+            with urlopen(req,timeout=5) as r: identity=json.loads(r.read())
+            return identity.get('user') if identity.get('logged_in') is True else None
+        except Exception:return None
+    def annotation_path(self):
+        path=urlsplit(self.path).path
+        m=re.fullmatch(r'/api/inside/annotations/v1/documents/([a-z][a-z0-9_-]{0,31})/([A-Za-z0-9_-]{1,120})/annotations(?:/([0-9a-f-]{36}))?',path)
+        return m.groups() if m else None
     def agent_allowed(self):
         if self.headers.get('Origin') not in (None,ORIGIN):return False
         try:token=Path(os.environ.get('VAULT_AGENT_TOKEN_FILE','/var/lib/agent-vault/read-token')).read_text().strip()
@@ -161,8 +174,26 @@ class Handler(BaseHTTPRequestHandler):
         return bool(token) and secrets.compare_digest(self.headers.get('Authorization',''),'Bearer '+token)
     def do_GET(self):
         asset=urlsplit(self.path).path
+        sdk_assets={
+          '/vault/annotation/index.js':'sdk/annotation/src/index.js',
+          '/vault/annotation/anchor.js':'sdk/annotation/src/anchor.js',
+          '/vault/annotation/dom.js':'sdk/annotation/src/dom.js',
+          '/vault/annotation/vault-adapter.js':'sdk/annotation/examples/vault-adapter.js',
+        }
+        if asset in sdk_assets:
+            return self.reply(200,(Path(__file__).parents[2]/sdk_assets[asset]).read_text(),'application/javascript; charset=utf-8')
         if asset in ('/vault/channel.css','/vault/channel.js'):
             return self.reply(200,(Path(__file__).parent/'web'/asset.rsplit('/',1)[1]).read_text(),'text/css; charset=utf-8' if asset.endswith('.css') else 'application/javascript; charset=utf-8')
+        if asset=='/api/inside/annotations/v1/session':
+            owner=self.annotation_owner()
+            return self.reply(200,{'owner':owner,'csrf':TOKEN}) if owner else self.reply(401,{'error':'请先登录个人工作台'})
+        if self.annotation_path():
+            owner=self.annotation_owner()
+            if not owner:return self.reply(401,{'error':'请先登录个人工作台'})
+            namespace,document_id,annotation_id=self.annotation_path()
+            if annotation_id:return self.reply(405,{'error':'method not allowed'})
+            try:return self.reply(200,ANNOTATIONS.list(owner,namespace,document_id))
+            except AnnotationError as e:return self.reply(404,{'error':str(e)})
         if urlsplit(self.path).path=='/api/vault-mcp':
             if not self.agent_allowed():return self.reply(401,{'error':'read-only credential required'})
             return self.reply(405,{'error':'SSE stream not offered; use POST'})
@@ -184,6 +215,7 @@ class Handler(BaseHTTPRequestHandler):
             if u.path=='/admin/vault/':return self.reply(200,shell(),'text/html; charset=utf-8')
             if u.path.startswith('/api/inside/vault/knowledge/'):
                 action=u.path.rsplit('/',1)[-1];arg=lambda key,default='':q.get(key,[default])[0]
+                if action=='session':return self.reply(200,{'token':TOKEN})
                 if action=='search':return self.reply(200,KNOWLEDGE.search(arg('q'),250))
                 if action=='read':return self.reply(200,KNOWLEDGE.document(arg('id')) if arg('id') else KNOWLEDGE.document_url(arg('url')))
                 if action=='notes':return self.reply(200,KNOWLEDGE.notes(arg('doc_id') or None))
@@ -198,7 +230,29 @@ class Handler(BaseHTTPRequestHandler):
             if u.path.endswith('/document'):return self.reply(200,get(q['id'][0],int(q['revision'][0]) if 'revision' in q else None))
             self.reply(404,{'error':'not found'})
         except (ValueError,KeyError) as e:self.reply(400,{'error':str(e)})
+    def do_PATCH(self):
+        parts=self.annotation_path()
+        if not parts or not parts[2]:return self.reply(404,{'error':'not found'})
+        owner=self.annotation_owner()
+        if not owner:return self.reply(401,{'error':'请先登录个人工作台'})
+        if self.headers.get('Origin')!=ORIGIN or not secrets.compare_digest(self.headers.get('X-Vault-Token',''),TOKEN):return self.reply(403,{'error':'请刷新文章后重试'})
+        try:
+            n=int(self.headers.get('Content-Length',0))
+            if not 0<n<=50000:raise AnnotationError('请求大小无效')
+            return self.reply(200,ANNOTATIONS.update(owner,*parts,json.loads(self.rfile.read(n))))
+        except (AnnotationError,ValueError,TypeError) as e:return self.reply(409,{'error':str(e)})
     def do_POST(self):
+        if self.annotation_path():
+            owner=self.annotation_owner()
+            if not owner:return self.reply(401,{'error':'请先登录个人工作台'})
+            if self.headers.get('Origin')!=ORIGIN or not secrets.compare_digest(self.headers.get('X-Vault-Token',''),TOKEN):return self.reply(403,{'error':'请刷新文章后重试'})
+            namespace,document_id,annotation_id=self.annotation_path()
+            if annotation_id:return self.reply(405,{'error':'method not allowed'})
+            try:
+                n=int(self.headers.get('Content-Length',0))
+                if not 0<n<=50000:raise AnnotationError('请求大小无效')
+                return self.reply(200,ANNOTATIONS.create(owner,namespace,document_id,json.loads(self.rfile.read(n))))
+            except (AnnotationError,ValueError,TypeError) as e:return self.reply(409,{'error':str(e)})
         if urlsplit(self.path).path=='/api/vault-mcp':
             if not self.agent_allowed():return self.reply(401,{'error':'read-only credential required'})
             if self.headers.get('MCP-Protocol-Version','2025-03-26') not in ('2025-03-26','2025-06-18'):return self.reply(400,{'error':'unsupported protocol version'})

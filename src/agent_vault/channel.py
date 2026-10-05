@@ -39,5 +39,5 @@ def render_channel(content, path):
     content=content.replace(assets,assets+'<style>body{background:var(--v-bg);color:var(--v-ink)}</style>',1)
     if path=='/admin/vault/': content=content.replace(nav,nav+'<div class="admin-heading"><h1>内容管理</h1><p>整理资料，留下可继续思考的起点。</p></div>',1)
     if path.startswith('/vault/') and path.endswith('.html') and not path.endswith('/index.html') and path!='/vault/analytics.html':
-        content=content.replace('</body>','<script src="/vault/reader-link.js?v=5"></script></body>')
+        content=content.replace('</body>','<script src="/vault/reader-link.js?v=7"></script></body>')
     return content
