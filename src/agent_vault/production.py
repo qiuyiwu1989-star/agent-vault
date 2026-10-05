@@ -2,7 +2,7 @@
 import hashlib, html, json, os, re, secrets, tempfile, threading, uuid
 from pathlib import Path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlsplit, parse_qs, quote
+from urllib.parse import urlsplit, parse_qs, quote, unquote
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError
 import psycopg2
@@ -130,17 +130,22 @@ def shell():
     return ADMIN.replace('<header><strong>Vault 管理</strong>','<header><strong>Vault 管理</strong><a href="/admin/vault/read">阅读笔记</a><a href="/vault/analytics.html">归档看板</a><a href="/admin/vault/insights">跨文章洞察</a><a href="/admin/vault/brief">每日简报</a>').replace('TOKEN',json.dumps(TOKEN)).replace('http://127.0.0.1:8765/','/vault/').replace("'http://127.0.0.1:8765'+x.url","x.url").replace('本机管理 · 发布仅更新本地','生产管理 · 草稿保存到数据库').replace('发布到本地阅读库','发布到网站').replace('已发布到本地阅读库','已发布到网站').replace("'/api/","'/api/inside/vault/").replace('expected:selected?.revision||0','expected:selected?.revision||0,live_hash:selected?.live_hash??null').replace("if(x.id?.startsWith('legacy-'))$('history').add(new Option('原始快照 v0','0'));",'')
 def public_catalog():
     result=[]
+    metadata={unquote(u):d for d in KNOWLEDGE.corpus() if d['kind']=='fulltext' for u in [d['url']]+d.get('alternate_urls',[])}
     for p in ROOT.rglob('*.html'):
         rel=p.relative_to(ROOT).as_posix()
         if len(p.relative_to(ROOT).parts)<2 or (p.name=='index.html' and len(p.relative_to(ROOT).parts)==2):continue
         try:target(rel)
         except ValueError:continue
         t=p.read_text();m=re.search(r'<title[^>]*>(.*?)</title>',t,re.S|re.I)
-        result.append(dict(title=html.unescape(re.sub('<[^>]+>','',m[1])).strip() if m else p.stem,collection=rel.split('/')[0],url='/vault/'+quote(rel),reader_url='/admin/vault/read?url='+quote('/vault/'+rel,safe=''),modified=p.stat().st_mtime))
+        info=metadata.get('/vault/'+rel,{})
+        result.append(dict(date=info.get('date'),summary=info.get('summary',''),tags=info.get('tags',[]),trust=info.get('trust',''),title=html.unescape(re.sub('<[^>]+>','',m[1])).strip() if m else p.stem,collection=rel.split('/')[0],url='/vault/'+quote(rel),reader_url='/admin/vault/read?url='+quote('/vault/'+rel,safe=''),modified=p.stat().st_mtime))
     return sorted(result,key=lambda r:r['modified'],reverse=True)
 LIBRARY="""<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Vault · 成果库</title><style>body{background:#faf8f3;color:#292623;font:16px/1.7 system-ui;max-width:1080px;margin:40px auto;padding:0 24px}nav{display:flex;gap:18px;flex-wrap:wrap}a{color:#854530}h1{font-size:42px;margin-bottom:8px}input,select{font:inherit;padding:10px;border:1px solid #ddd;border-radius:8px;background:white}input{width:min(55%,540px)}#list{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-top:24px}article{border:1px solid #ddd;border-radius:10px;background:white;padding:20px}small{display:block;color:#777}article a{font-size:18px;text-decoration:none}</style><nav><a href="/">邱懿武</a><a href="/admin/vault/">管理成果</a><a href="/admin/vault/read">阅读笔记</a><a href="/vault/analytics.html">归档看板</a><a href="/admin/vault/insights">跨文章洞察</a><a href="/admin/vault/brief">每日简报</a></nav><h1>Vault · 成果库</h1><p>阅读、榨书、日报与 HTML 作品，持续整理，随时回看。</p><input id="q" placeholder="搜索标题…" aria-label="搜索标题"><select id="collection" aria-label="集合"><option value="">全部集合</option><option value="books">榨书档案</option><option value="reading">阅读档案</option><option value="digest">日报</option><option value="html">HTML 成果</option></select><p id="count">加载中…</p><div id="list"></div><script>let rows=[];const q=document.querySelector('#q'),c=document.querySelector('#collection');function draw(){let found=rows.filter(x=>(!c.value||x.collection===c.value)&&x.title.toLowerCase().includes(q.value.toLowerCase()));document.querySelector('#count').textContent=found.length+' 份成果';const list=document.querySelector('#list');list.replaceChildren();for(const x of found){let a=document.createElement('a');a.href=x.url;a.textContent=x.title;let s=document.createElement('small');s.textContent=x.collection;let card=document.createElement('article');card.append(s,a);const r=document.createElement('a');r.href=x.reader_url;r.textContent='划线 · 笔记';r.style.cssText='display:block;font-size:13px;margin-top:12px';card.append(r);list.append(card)}}q.oninput=c.onchange=draw;fetch('/vault/catalog.json').then(r=>{if(!r.ok)throw Error();return r.json()}).then(x=>{rows=x;draw()}).catch(()=>document.querySelector('#count').textContent='暂时无法加载，请稍后刷新');</script></html>"""
 class Handler(BaseHTTPRequestHandler):
     def reply(self,status,obj,ctype='application/json; charset=utf-8'):
+        if isinstance(obj,str) and ctype.startswith('text/html') and '/vault/channel.js' not in obj:
+            assets='<link rel="stylesheet" href="/vault/channel.css?v=3" data-vault-theme="1"><script defer src="/vault/channel.js?v=3"></script>'
+            obj=obj.replace('</head>',assets+'</head>',1) if '</head>' in obj else obj.replace('</style>','</style>'+assets,1)
         b=(obj if isinstance(obj,str) else json.dumps(obj,ensure_ascii=False)).encode();self.send_response(status)
         for k,v in {'Content-Type':ctype,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','Content-Length':str(len(b))}.items():self.send_header(k,v)
         self.end_headers();self.wfile.write(b)
@@ -155,11 +160,14 @@ class Handler(BaseHTTPRequestHandler):
         except OSError:return False
         return bool(token) and secrets.compare_digest(self.headers.get('Authorization',''),'Bearer '+token)
     def do_GET(self):
+        asset=urlsplit(self.path).path
+        if asset in ('/vault/channel.css','/vault/channel.js'):
+            return self.reply(200,(Path(__file__).parent/'web'/asset.rsplit('/',1)[1]).read_text(),'text/css; charset=utf-8' if asset.endswith('.css') else 'application/javascript; charset=utf-8')
         if urlsplit(self.path).path=='/api/vault-mcp':
             if not self.agent_allowed():return self.reply(401,{'error':'read-only credential required'})
             return self.reply(405,{'error':'SSE stream not offered; use POST'})
         if self.path=='/vault/reader-link.js':return self.reply(200,(Path(__file__).parent/'web/reader-link.js').read_text(),'application/javascript; charset=utf-8')
-        if self.path=='/vault/':return self.reply(200,LIBRARY,'text/html; charset=utf-8')
+        if self.path=='/vault/':return self.reply(200,(Path(__file__).parent/'web/channel.html').read_text(),'text/html; charset=utf-8')
         if self.path=='/vault/catalog.json':return self.reply(200,public_catalog())
         if not self.authenticated():return self.reply(401,{'error':'请先登录后台'})
         try:
