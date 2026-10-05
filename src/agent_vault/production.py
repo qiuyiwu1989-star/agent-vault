@@ -8,6 +8,7 @@ from urllib.error import HTTPError
 import psycopg2
 from psycopg2.extras import Json
 from .admin import ADMIN
+from .channel import render_channel
 from .core import page, render_body
 from .knowledge import Knowledge
 from .knowledge_mcp import rpc
@@ -143,9 +144,8 @@ def public_catalog():
 LIBRARY="""<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Vault · 成果库</title><style>body{background:#faf8f3;color:#292623;font:16px/1.7 system-ui;max-width:1080px;margin:40px auto;padding:0 24px}nav{display:flex;gap:18px;flex-wrap:wrap}a{color:#854530}h1{font-size:42px;margin-bottom:8px}input,select{font:inherit;padding:10px;border:1px solid #ddd;border-radius:8px;background:white}input{width:min(55%,540px)}#list{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-top:24px}article{border:1px solid #ddd;border-radius:10px;background:white;padding:20px}small{display:block;color:#777}article a{font-size:18px;text-decoration:none}</style><nav><a href="/">邱懿武</a><a href="/admin/vault/">管理成果</a><a href="/admin/vault/read">阅读笔记</a><a href="/vault/analytics.html">归档看板</a><a href="/admin/vault/insights">跨文章洞察</a><a href="/admin/vault/brief">每日简报</a></nav><h1>Vault · 成果库</h1><p>阅读、榨书、日报与 HTML 作品，持续整理，随时回看。</p><input id="q" placeholder="搜索标题…" aria-label="搜索标题"><select id="collection" aria-label="集合"><option value="">全部集合</option><option value="books">榨书档案</option><option value="reading">阅读档案</option><option value="digest">日报</option><option value="html">HTML 成果</option></select><p id="count">加载中…</p><div id="list"></div><script>let rows=[];const q=document.querySelector('#q'),c=document.querySelector('#collection');function draw(){let found=rows.filter(x=>(!c.value||x.collection===c.value)&&x.title.toLowerCase().includes(q.value.toLowerCase()));document.querySelector('#count').textContent=found.length+' 份成果';const list=document.querySelector('#list');list.replaceChildren();for(const x of found){let a=document.createElement('a');a.href=x.url;a.textContent=x.title;let s=document.createElement('small');s.textContent=x.collection;let card=document.createElement('article');card.append(s,a);const r=document.createElement('a');r.href=x.reader_url;r.textContent='划线 · 笔记';r.style.cssText='display:block;font-size:13px;margin-top:12px';card.append(r);list.append(card)}}q.oninput=c.onchange=draw;fetch('/vault/catalog.json').then(r=>{if(!r.ok)throw Error();return r.json()}).then(x=>{rows=x;draw()}).catch(()=>document.querySelector('#count').textContent='暂时无法加载，请稍后刷新');</script></html>"""
 class Handler(BaseHTTPRequestHandler):
     def reply(self,status,obj,ctype='application/json; charset=utf-8'):
-        if isinstance(obj,str) and ctype.startswith('text/html') and '/vault/channel.js' not in obj:
-            assets='<link rel="stylesheet" href="/vault/channel.css?v=4" data-vault-theme="1"><script defer src="/vault/channel.js?v=4"></script>'
-            obj=obj.replace('</head>',assets+'</head>',1) if '</head>' in obj else obj.replace('</style>','</style>'+assets,1)
+        if isinstance(obj,str) and ctype.startswith('text/html'):
+            obj=render_channel(obj,urlsplit(self.path).path)
         b=(obj if isinstance(obj,str) else json.dumps(obj,ensure_ascii=False)).encode();self.send_response(status)
         for k,v in {'Content-Type':ctype,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','Content-Length':str(len(b))}.items():self.send_header(k,v)
         self.end_headers();self.wfile.write(b)
@@ -169,6 +169,12 @@ class Handler(BaseHTTPRequestHandler):
         if asset=='/vault/reader-link.js':return self.reply(200,(Path(__file__).parent/'web/reader-link.js').read_text(),'application/javascript; charset=utf-8')
         if self.path=='/vault/':return self.reply(200,(Path(__file__).parent/'web/channel.html').read_text(),'text/html; charset=utf-8')
         if self.path=='/vault/catalog.json':return self.reply(200,public_catalog())
+        if re.fullmatch(r'/vault/(?:books|reading|digest|html)/(?:.*\.html)?',asset) or asset=='/vault/analytics.html':
+            rel=unquote(asset[len('/vault/'):])
+            if rel.endswith('/'):rel+='index.html'
+            target=(ROOT/rel).resolve()
+            if not target.is_relative_to(ROOT.resolve()) or not target.is_file() or target.suffix!='.html':return self.reply(404,{'error':'not found'})
+            return self.reply(200,target.read_text(),'text/html; charset=utf-8')
         if not self.authenticated():return self.reply(401,{'error':'请先登录后台'})
         try:
             u=urlsplit(self.path);q=parse_qs(u.query)
