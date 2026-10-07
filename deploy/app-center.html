@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+    <title>应用中心 · 个人工作台</title>
+    <link rel="icon" href="/qiu-icon.svg?v=20260522" type="image/svg+xml">
+    <link rel="stylesheet" href="/design-tokens.css?v=9cf70554">
+    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600;700&family=Source+Serif+4:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Noto+Serif+SC:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css?v=performance-20260525">
+    <style>
+        body {
+            background: var(--bg);
+            font-family: var(--font-cn);
+        }
+
+        /* === 主体 === */
+        .ws-main {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 32px 28px 80px;
+        }
+
+        .ws-hero {
+            margin-bottom: 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 28px;
+            flex-wrap: wrap;
+        }
+        .ws-hero h1 {
+            font-family: var(--font-cn-serif);
+            font-weight: 500;
+            font-size: 1.7rem;
+            color: var(--ink);
+            letter-spacing: 0.01em;
+            line-height: 1.2;
+        }
+        /* 中文不用斜体 —— 中文没有真正的斜体字形,浏览器是把方块字整体剪切变形
+           （跟 admin/proposals.html 同一条规矩,2026-08-11 补齐到这页）。 */
+        .ws-hero h1 em {
+            font-family: var(--font-cn-serif);
+            font-style: normal;
+            font-weight: 600;
+            color: var(--accent);
+        }
+        .ws-hero .status {
+            font-family: var(--font-mono);
+            font-size: 10.5px;
+            letter-spacing: 0.18em;
+            color: var(--ink-3);
+            text-transform: uppercase;
+            text-align: right;
+        }
+        .ws-hero .status em {
+            font-family: var(--font-serif);
+            font-style: italic;
+            color: var(--accent);
+            font-size: 14px;
+            margin: 0 4px;
+        }
+
+        /* === KPI 行（工业感）=== */
+        .ws-kpis {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 1px;
+            background: var(--line);
+            border: 1px solid var(--line);
+            border-radius: var(--qiu-radius-sm);
+            margin-bottom: 32px;
+            overflow: hidden;
+        }
+        .ws-kpi {
+            background: var(--card);
+            padding: 18px 20px;
+        }
+        .ws-kpi .label {
+            font-family: var(--font-mono);
+            font-size: 9.5px;
+            letter-spacing: 0.22em;
+            color: var(--ink-3);
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .ws-kpi .num {
+            font-family: var(--font-serif);
+            font-style: italic;
+            font-size: 1.9rem;
+            color: var(--accent);
+            font-weight: 500;
+            line-height: 1;
+        }
+        .ws-kpi .sub {
+            font-family: var(--font-cn);
+            font-size: 11.5px;
+            color: var(--ink-3);
+            margin-top: 4px;
+        }
+
+        /* === 工具栈（工作台核心）=== */
+        .ws-section-head {
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+            margin: 0 0 16px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--line);
+        }
+        .ws-section-head .num {
+            font-family: var(--font-serif);
+            font-style: italic;
+            font-size: 1.4rem;
+            color: var(--accent);
+            font-weight: 500;
+        }
+        .ws-section-head h2 {
+            font-family: var(--font-cn-serif);
+            font-weight: 500;
+            font-size: 1.2rem;
+            color: var(--ink);
+        }
+        .ws-section-head .meta {
+            margin-left: auto;
+            font-family: var(--font-mono);
+            font-size: 10px;
+            letter-spacing: 0.18em;
+            color: var(--ink-3);
+            text-transform: uppercase;
+        }
+        .ws-section { margin-bottom: 40px; }
+
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 12px;
+        }
+        .tool-card {
+            background: var(--card);
+            border: 1px solid var(--glass-line);
+            border-radius: var(--qiu-radius-sm);
+            padding: 18px 20px;
+            text-decoration: none;
+            color: inherit;
+            transition: all .15s;
+            display: block;
+            position: relative;
+        }
+        .tool-card:hover {
+            background: var(--card);
+            border-color: rgba(166,93,78,0.32);
+            transform: translateY(-2px);
+        }
+        .tool-card.featured {
+            background: linear-gradient(135deg, rgba(166,93,78,0.12), rgba(166,93,78,0.02));
+            border-color: rgba(166,93,78,0.32);
+        }
+        .tool-card .code {
+            font-family: var(--font-mono);
+            font-size: 9.5px;
+            letter-spacing: 0.22em;
+            color: var(--accent);
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .tool-card .name {
+            font-family: var(--font-cn-serif);
+            font-weight: 500;
+            font-size: 1.1rem;
+            color: var(--ink);
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+        .tool-card .name .arrow {
+            font-family: var(--font-serif);
+            font-style: italic;
+            color: var(--ink-3);
+            font-size: 1.2rem;
+        }
+        .tool-card:hover .name .arrow { color: var(--accent); }
+        .tool-card .desc {
+            font-family: var(--font-cn);
+            font-size: 12.5px;
+            color: var(--ink-2);
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+        .tool-card .stats {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--ink-3);
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+        .tool-card .stats em {
+            font-family: var(--font-serif);
+            font-style: italic;
+            color: var(--accent);
+            font-size: 13px;
+            font-weight: 500;
+            margin: 0 3px;
+        }
+
+        /* 命令栏 */
+        .ws-cmd {
+            background: rgba(58,57,54,0.95);
+            color: rgba(255,255,255,0.92);
+            border-radius: var(--qiu-radius-sm);
+            padding: 16px 20px;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            line-height: 1.7;
+            letter-spacing: 0.06em;
+        }
+        .ws-cmd .pr { color: var(--accent); }
+        .ws-cmd .cm { color: rgba(255,255,255,0.55); }
+        .ws-cmd .h { color: white; font-weight: 600; }
+
+        /* 最近活动 */
+        .ws-activity {
+            background: var(--card);
+            border: 1px solid var(--glass-line);
+            border-radius: var(--qiu-radius-sm);
+            padding: 18px 22px;
+        }
+        .act-item {
+            display: grid;
+            grid-template-columns: 100px 1fr;
+            gap: 18px;
+            padding: 10px 0;
+            border-bottom: 1px dashed var(--line);
+            font-family: var(--font-cn);
+            font-size: 13px;
+        }
+        .act-item:last-child { border-bottom: none; }
+        .act-item .when {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            letter-spacing: 0.14em;
+            color: var(--ink-3);
+            text-transform: uppercase;
+            padding-top: 2px;
+        }
+        .act-item .what {
+            color: var(--ink-2);
+        }
+        .act-item .what strong {
+            color: var(--ink);
+            font-family: var(--font-cn-serif);
+            font-weight: 500;
+        }
+
+        /* ── 资产总览（数据只来自 data/assets/latest.json）── */
+        .ao-stamp { font-family: var(--font-mono); font-size: 10px; letter-spacing: .08em;
+            color: var(--ink-3); font-weight: 400; margin-left: 10px; }
+        .ao-top { display: grid; grid-template-columns: minmax(180px,1fr) 2.4fr; gap: 16px; margin-bottom: 14px; }
+        @media (max-width: 860px) { .ao-top { grid-template-columns: 1fr; } }
+        .ao-total { border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
+        .ao-total .k { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .18em;
+            text-transform: uppercase; color: var(--accent, #B26A16); }
+        .ao-total .v { font-family: var(--font-cn-serif); font-size: 40px; font-weight: 700;
+            line-height: 1.1; margin-top: 4px; }
+        .ao-total .d { font-size: 11.5px; color: var(--ink-3); margin-top: 5px; line-height: 1.6; }
+        .ao-mix { border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px;
+            display: flex; flex-direction: column; gap: 9px; justify-content: center; }
+        .ao-bar { display: flex; height: 22px; border-radius: 7px; overflow: hidden; border: 1px solid var(--line); }
+        .ao-bar i { display: block; height: 100%; }
+        .ao-leg { display: flex; flex-wrap: wrap; gap: 8px 16px; }
+        .ao-leg span { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--ink-2); }
+        .ao-leg i { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+        .ao-leg b { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink); }
+        .ao-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr)); gap: 1px;
+            background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+        .ao-cell { background: var(--bg, #fff); padding: 11px 13px; }
+        .ao-cell .k { font-family: var(--font-mono); font-size: 8.5px; letter-spacing: .12em;
+            text-transform: uppercase; color: var(--ink-3); }
+        .ao-cell .v { font-family: var(--font-cn-serif); font-size: 21px; font-weight: 700; margin-top: 2px; }
+        .ao-cell .d { font-size: 10.5px; color: var(--ink-3); margin-top: 1px; line-height: 1.45; }
+        .ao-cell.warn .v { color: #B26A16; }
+        .ao-cell.bad  .v { color: #A33; }
+        .ao-more { margin-top: 12px; }
+        .ao-more summary { cursor: pointer; font-size: 12px; color: var(--ink-3); }
+        .ao-more table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+        .ao-more td { padding: 5px 8px; border-bottom: 1px solid var(--line); color: var(--ink-2); }
+        .ao-more td.n { text-align: right; font-family: var(--font-mono); color: var(--ink); white-space: nowrap; }
+        .ao-note { font-size: 11.5px; color: var(--ink-3); margin-top: 10px; line-height: 1.7; }
+    </style>
+    <script src="/assets/ws-shell.js?v=agent-kernel-20261003b"></script>
+<style>.app-toolbar{display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between;margin-bottom:18px}#app-filters{display:flex;gap:8px;flex-wrap:wrap}#app-filters button,#app-search{font:inherit;padding:10px 16px;border:1px solid var(--line,#d6cdbc);border-radius:24px;background:var(--bg,#fbfaf6);color:var(--ink,#292623)}#app-filters button{cursor:pointer}#app-filters button[aria-pressed=true]{background:var(--ink,#292623);color:var(--bg,#fbfaf6)}.app-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:18px}.app-grid .tool-card{border-radius:20px;min-height:190px}.app-grid [hidden]{display:none!important}#app-count{font-size:13px;color:var(--ink-3);margin-bottom:14px}@media(max-width:600px){.app-grid{grid-template-columns:1fr}#app-search{width:100%}}</style></head>
+<body>
+
+<main class="ws-main">
+
+    <!-- HERO 状态条 -->
+    <div class="ws-hero">
+        <div>
+            <h1>个人工作台 <em>应用中心</em></h1>
+        </div>
+        <div class="status">
+            上次 ingest <em id="last-ingest">—</em> · 待处理预测 <em id="overdue-count">—</em>
+        </div>
+    </div>
+
+    <!-- KPI -->
+    <div class="ws-kpis">
+        <div class="ws-kpi">
+            <div class="label">— PPT 原子页</div>
+            <div class="num" id="kpi-ppt">—</div>
+            <div class="sub" id="kpi-ppt-sub">含 VLM 标注</div>
+        </div>
+        <div class="ws-kpi">
+            <div class="label">— 文字原子</div>
+            <div class="num" id="kpi-text">—</div>
+            <div class="sub" id="kpi-text-sub">8 类萃取</div>
+        </div>
+        <div class="ws-kpi">
+            <div class="label">— 关联边</div>
+            <div class="num" id="kpi-links">—</div>
+            <div class="sub">跨源连接</div>
+        </div>
+        <div class="ws-kpi">
+            <div class="label">— 分析档案</div>
+            <div class="num" id="kpi-analysis">—</div>
+            <div class="sub">含可证伪预测</div>
+        </div>
+        <div class="ws-kpi">
+            <div class="label">— 数据源</div>
+            <div class="num" id="kpi-sources">—</div>
+            <div class="sub">已入库录音/材料</div>
+        </div>
+        <div class="ws-kpi">
+            <div class="label">— 人物档案</div>
+            <div class="num" id="kpi-persons">—</div>
+            <div class="sub">跨录音追踪</div>
+        </div>
+    </div>
+
+<section class="ws-section" id="app-center"><div class="ws-section-head"><h2>应用中心</h2><span class="meta">所有应用，一个入口</span></div><div class="app-toolbar"><div id="app-filters" aria-label="按用途筛选应用"><button type="button" data-filter="全部" aria-pressed="true">全部</button><button type="button" data-filter="内容创作" aria-pressed="false">内容创作</button><button type="button" data-filter="知识资产" aria-pressed="false">知识资产</button><button type="button" data-filter="信息输入" aria-pressed="false">信息输入</button><button type="button" data-filter="网站管理" aria-pressed="false">网站管理</button></div><input id="app-search" type="search" placeholder="搜索应用名称或用途…" aria-label="搜索应用"></div><p id="app-count" role="status"></p><div class="app-grid"><a class="tool-card" href="/admin/vault/app" data-group="知识资产"><div class="code">VAULT</div><div class="name">Vault · 知识与阅读 <span class="arrow">→</span></div><div class="desc">归档管理、阅读笔记、数据洞察、每日简报与 Agent 接入。</div></a><a data-group="内容创作" class="tool-card featured" href="/admin/writing.html">
+                <div class="code">— WRITING ENGINE</div>
+                <div class="name">写作台 <span class="arrow">→</span></div>
+                <div class="desc">写作引擎的驾驶舱 · 六段接力走到哪 + 控制器读数 + 欠深脑的回流队列 + 该怎么说</div>
+                <div class="stats">skill <em>xiezuo-yinqing</em> · 基因组 + 四谱 + 闸门</div>
+            </a><a data-group="知识资产" class="tool-card" href="/slides.html">
+                <div class="code">— SLIDES</div>
+                <div class="name">PPT 素材库 <span class="arrow">→</span></div>
+                <div class="desc">10 套课程 2081 张幻灯片 → 1386 原子页 · 检索/筛选/管理员模式</div>
+                <div class="stats">VLM <em id="t-vlm">—</em>% 标注覆盖</div>
+            </a><a data-group="内容创作" class="tool-card" href="/admin/recap.html">
+                <div class="code">— RECAP STUDIO</div>
+                <div class="name">实录工坊 <span class="arrow">→</span></div>
+                <div class="desc">逐字稿 → 现场实录文章：AI 出初稿 + 脱敏/密度回扫 + 人工复核 + 一键发布上线</div>
+                <div class="stats">2026-08-19 新增 · speech-recap 流程固化</div>
+            </a><a data-group="知识资产" class="tool-card featured" href="/archive.html?type=ai-cases">
+                <div class="code">— 萃取原子 · 8 类</div>
+                <div class="name">萃取原子库 <span class="arrow">→</span></div>
+                <div class="desc">管线从会议/讲课/文章自动抽出：案例 C / 方法 K / 观点 V / 金句 Q / 类比 A / 数据 D / 真问题 I / 人物 P</div>
+                <div class="stats">共 <em id="t-atoms-text">—</em> 颗 · 持续增长</div>
+            </a><a data-group="知识资产" class="tool-card" href="/archive.html?type=frameworks">
+                <div class="code">— 策展资产 · 5 库</div>
+                <div class="name">策展资产库 <span class="arrow">→</span></div>
+                <div class="desc">手工精选的高阶 IP：方法论 / 案例 / 故事 / 判断 / 人物 / 著作</div>
+                <div class="stats">共 <em>166</em> 个 · 命名清晰可引用</div>
+            </a><a data-group="知识资产" class="tool-card" href="/graph.html">
+                <div class="code">— GRAPH</div>
+                <div class="name">关系图谱 <span class="arrow">→</span></div>
+                <div class="desc">所有资产之间怎么互相引用 · 241 节点 · 296 关系</div>
+                <div class="stats">跨源关联可视化</div>
+            </a><a data-group="知识资产" class="tool-card" href="/admin/atom-pages.html">
+                <div class="code">— ATOMS · 原子页总览</div>
+                <div class="name">原子页总览 <span class="arrow">→</span></div>
+                <div class="desc">人工策展库 / AI 萃取层 / 内核库三层库存 + 哪些有专属页、哪些还只能靠 card.html</div>
+                <div class="stats">2026-08-10 三层核对</div>
+            </a><a data-group="网站管理" class="tool-card featured" href="/admin/site.html">
+                <div class="code">— FEEDBACK · 访客提问</div>
+                <div class="name">访客提问 <span class="arrow">→</span></div>
+                <div class="desc">search.html 检索框 + AI 分身对话里访客问出的问题排队待签 · 签「收」并入真问题库，供检索/分身引用</div>
+                <div class="stats">待签 · 已收 · 已丢弃</div>
+            </a><a data-group="网站管理" class="tool-card" href="/admin/projects.html">
+                <div class="code">— OPEN SOURCE · GITHUB</div>
+                <div class="name">开源项目管理 <span class="arrow">→</span></div>
+                <div class="desc">统一编辑中英文介绍、分类和展示状态；查看 GitHub 同步结果并手动同步</div>
+                <div class="stats">每日自动同步 · 网站公开页</div>
+            </a><a data-group="内容创作" class="tool-card" href="/admin/visual-notes.html"><div class="code">— VISUAL NOTES · 贴图频道</div><div class="name">贴图频道 · Agent 接入 <span class="arrow">→</span></div><div class="desc">公开使用说明、Key 申请审核与管理、外部 Agent 草稿和发布</div><div class="stats">申请 · 权限 · 轮换 · 撤销 · 草稿</div></a><a data-group="网站管理" class="tool-card" href="/admin/content.html">
+                <div class="code">— CONTENT · 内容库</div>
+                <div class="name">内容库 <span class="arrow">→</span></div>
+                <div class="desc">产品 / 著作 / 文章 直接在工作台编辑 → 保存即上线 · API 直写服务器(/api/inside)· 告别手改 JSON + scp</div>
+                <div class="stats">产品 <em id="t-products">—</em> · 著作 <em id="t-books">—</em> · 文章 <em id="t-articles">—</em></div>
+            </a><a data-group="网站管理" class="tool-card" href="/admin/review.html">
+                <div class="code">— REVIEW · 发布审核</div>
+                <div class="name">发布审核台 <span class="arrow">→</span></div>
+                <div class="desc">决定哪些萃取原子对外公开 · 逐条/整类勾选 → 一键重算并发布公开子集</div>
+                <div class="stats">已公开 <em id="t-pub">—</em> / <em id="t-atoms-all">—</em> 颗</div>
+            </a><a data-group="知识资产" class="tool-card" href="/admin/memory.html">
+                <div class="code">— MEMORY · 记忆中心</div>
+                <div class="name">记忆中心 <span class="arrow">→</span></div>
+                <div class="desc">可证伪预测追踪（到期提醒 + 应验/证伪回写）· 分析档案 · 人物画像</div>
+                <div class="stats">预测 <em id="t-preds">—</em> · 待验证 <em id="t-preds-wait">—</em></div>
+            </a><a data-group="信息输入" class="tool-card featured" href="/admin/ingest.html">
+                <div class="code">— INGEST · Web 上传</div>
+                <div class="name">原子化管线 <span class="arrow">→</span></div>
+                <div class="desc">拖拽转写文档 → 自动去重 → 一键抽 8 类原子 + 记忆 + 预测 + 发布 · 含历史文档管理</div>
+                <div class="stats">浏览器直接用 · 无需命令行</div>
+            </a><a data-group="信息输入" class="tool-card" href="/admin/subscriptions.html">
+                <div class="code">— SUBSCRIPTIONS · 外部世界</div>
+                <div class="name">信息订阅中心 <span class="arrow">→</span></div>
+                <div class="desc">RSS / Atom / RSSHub / WeRSS / 手动链接 → 完整文章库存 → 耳目张力过滤</div>
+                <div class="stats">订阅源 <em id="t-sub-sources">—</em> · 未读 <em id="t-sub-unread">—</em></div>
+            </a></div><p id="app-empty" hidden>没有找到匹配的应用。</p></section>    <!-- 资产总览 —— 只读 data/assets/latest.json，本页不算数 -->
+    <div class="ws-section" id="asset-overview" hidden>
+        <div class="ws-section-head">
+            <span class="num">00</span>
+            <h2>资产总览 <span id="ao-stamp" class="ao-stamp"></span></h2>
+        </div>
+        <div id="ao-body"></div>
+    </div>
+
+    <!-- 最近活动 -->
+    <div class="ws-section">
+        <div class="ws-section-head">
+            <span class="num">05</span>
+            <h2>最近活动</h2>
+            <span class="meta">— Recent activity</span>
+        </div>
+        <div class="ws-activity" id="activity"></div>
+    </div>
+
+</main>
+
+<script>
+// 加载 KPI（私有数据，登录后才能拉到）
+const setKPI = (id, v) => { const el = document.getElementById(id); if (el && v != null) el.textContent = v; };
+
+/* ══════════════════════════════════════════════════════════════
+   资产总览 —— 只读 pipeline/assets_snapshot.py 的产物，本页一个数都不算。
+
+   为什么要这样：2026-08-11 实测到同一件事有两套算法。
+     · PPT 原子：本页原来读 /api/inside/stats 的 ppt_atoms（来自
+       slide-library-lite.atoms_total）= 1484，而资产看板数 data/atom/*.json
+       的文件数 = 1443。差 41，谁都没错，只是量的不是同一个东西。
+     · 文字原子：/api/inside/stats 读 extracted-atoms.json 的 stats 块，
+       而那个块**从来没有任何代码更新过** —— 每签一次字就漂一点，
+       当天已漂出 480 vs 484。
+   两个页面显示同一个指标却不一样，用的人不知道该信谁，这比数字不准更糟。
+   规矩（DATA-GOVERNANCE 第 0 节）：数量只有一个出处 = data/assets/latest.json。
+   本页照抄，不重算；latest.json 没有的（上次 ingest、内容库计数）才走 API。
+   ══════════════════════════════════════════════════════════════ */
+const AO_COLORS = {
+  slides:'#8E4231', talk_sections:'#2C5F8E', text_atoms:'#2C7A63',
+  curated:'#B26A16', book_sections:'#7A5C8E', book_chapters:'#7A5C8E', memory_files:'#8B837A',
+};
+const AO_LABELS = {
+  slides:'PPT 原子', talk_sections:'实录章节', text_atoms:'文字原子',
+  curated:'策展资产', book_sections:'体系正文', book_chapters:'书稿章节', memory_files:'记忆档案',
+};
+const AO_CAT = {
+  methods_full:'方法论全库', works:'作品库', book_kits:'《AI转型》附属库',
+  aizaowu_drafts:'《AI造物》书稿版本', essays:'长文论证提要', predictions:'预测台账',
+  api_exports:'对外 API 快照', audio:'朗读音频', lengjing_sources:'冷静原子来源',
+  drafts:'写作台草稿', shennao_analyses:'深脑分析层', subscription_sources:'订阅源',
+  writing_dna:'写作 DNA', atom_clusters:'判断归并聚类', articles:'文章列表',
+  judgments:'时代判断', detail_pages:'资产详情页', specs:'规格文档',
+  docs:'过程文档', kernel_atoms:'内核库 PG',
+};
+const aoFmt = n => n == null ? '—' : Number(n).toLocaleString('en-US');
+function aoNum(v) {
+  if (typeof v === 'number') return aoFmt(v);
+  if (!v || typeof v !== 'object') return '—';
+  if (v.atoms !== undefined) return aoFmt(v.atoms);   // 内核库 PG：别把 atoms+edges 加起来
+  if (v.verified !== undefined) return aoFmt(v.total);
+  if (v.records !== undefined) return aoFmt(v.files);
+  if (v.bytes !== undefined) return aoFmt(v.files);
+  if (v.total !== undefined) return aoFmt(v.total);
+  const e = Object.values(v).filter(x => typeof x === 'number');
+  return e.length ? aoFmt(e.reduce((a, b) => a + b, 0)) : '—';
+}
+
+async function loadAssetOverview() {
+  let snap;
+  try {
+    const r = await fetch('/data/assets/latest.json?t=' + Date.now(), {cache:'no-store'});
+    if (!r.ok) return;                       // 没有快照就整块不显示，不摆空壳
+    snap = await r.json();
+  } catch (e) { return; }
+
+  const b = snap.breakdown || {}, f = snap.flow || {}, s = snap.slides || {},
+        raw = snap.raw || {}, books = snap.books || {}, idx = snap.index || {};
+  const parts = Object.entries(b).filter(([, v]) => v);
+  const tot = parts.reduce((a, [, v]) => a + v, 0) || 1;
+
+  const bar = parts.map(([k, v]) =>
+    `<i style="width:${v/tot*100}%;background:${AO_COLORS[k]||'#999'}" title="${AO_LABELS[k]||k} ${v}"></i>`).join('');
+  const leg = parts.map(([k, v]) =>
+    `<span><i style="background:${AO_COLORS[k]||'#999'}"></i>${AO_LABELS[k]||k} <b>${aoFmt(v)}</b></span>`).join('');
+
+  const pct = (a, t) => t ? Math.round(a * 100 / t) : 0;
+  const secPct = s.total ? pct(s.sectioned, s.total) : 0;
+  const extracted = f.extracted_sessions, sessions = (raw.shennao||{}).sessions;
+
+  // 每一格都对应一个「会让人动手」的读数，不是库存虚荣指标
+  const cells = [
+    ['待签候选', aoFmt(f.proposals_pending), `已签 ${aoFmt(f.proposals_accepted)} · 签字才进库`,
+      (f.proposals_pending||0) > 20 ? 'bad' : (f.proposals_pending||0) > 0 ? 'warn' : ''],
+    ['他人反馈待签', aoFmt(f.feedback_pending), `共 ${aoFmt(f.feedback_total)} 条 · 唯一外部来源`,
+      (f.feedback_pending||0) > 0 ? 'warn' : ''],
+    ['知识体系', aoFmt(books.count), `${aoFmt(books.systems_indexed)}/${aoFmt(books.count)} 部已抓到正文`,
+      (books.systems_indexed||0) < (books.count||0) ? 'warn' : ''],
+    ['归节率', secPct + '%', `${aoFmt(s.sectioned)}/${aoFmt(s.total)} 页 · 备课前置`,
+      secPct < 50 ? 'warn' : ''],
+    ['深脑萃取', (extracted!=null && sessions) ? pct(extracted, sessions)+'%' : '—',
+      `已抽 ${aoFmt(extracted)}/${aoFmt(sessions)} 场`, 'warn'],
+    ['真的用过', aoFmt(f.used_atoms), `${aoFmt(f.usage_events)} 次事件 · 回流环唯一读数`,
+      (f.used_atoms||0) < 50 ? 'bad' : ''],
+    ['关系边覆盖', (f.link_coverage!=null ? f.link_coverage+'%' : '—'),
+      `${aoFmt(f.edges)} 条边`, (f.link_coverage||0) < 50 ? 'warn' : ''],
+    ['语义索引', aoFmt(idx.total), '能被检索命中的条目', ''],
+  ];
+
+  const catRows = Object.entries(snap.catalog || {})
+    .filter(([, v]) => v != null)
+    .map(([k, v]) => `<tr><td>${AO_CAT[k] || k}</td><td class="n">${aoNum(v)}</td></tr>`).join('');
+
+  document.getElementById('ao-stamp').textContent =
+    `实测 ${snap.measured_at || ''} · 口径 v${snap.schema_version || 1}`;
+  document.getElementById('ao-body').innerHTML = `
+    <div class="ao-top">
+      <div class="ao-total">
+        <div class="k">可寻址单元</div>
+        <div class="v">${aoFmt(snap.total)}</div>
+        <div class="d">能被检索、引用、组装进产出的最小单位<br>
+          旧口径 <b>${aoFmt(snap.total_legacy)}</b> · 跨版本可比的那个数</div>
+      </div>
+      <div class="ao-mix"><div class="ao-bar">${bar}</div><div class="ao-leg">${leg}</div></div>
+    </div>
+    <div class="ao-grid">
+      ${cells.map(([k, v, d, cls]) => `<div class="ao-cell ${cls}">
+        <div class="k">${k}</div><div class="v">${v}</div><div class="d">${d}</div></div>`).join('')}
+    </div>
+    ${catRows ? `<details class="ao-more"><summary>资产全目录 · 六类之外还有什么（不计入总数）</summary>
+      <table>${catRows}</table>
+      <div class="ao-note">不计入总数的理由逐条写在
+        <a href="/admin/assets.html">资产看板</a>。「不计入」和「漏了」必须区分得开。</div>
+    </details>` : ''}
+    <div class="ao-note">数字只有一个出处：<code>data/assets/latest.json</code>（每次部署实测）。
+      本页不重算 —— 两个页面对同一指标给出不同的数，比数不准更糟。明细见
+      <a href="/admin/assets.html">资产看板</a>。</div>`;
+  document.getElementById('asset-overview').hidden = false;
+
+  // 顶部 KPI 也改用同一份快照，跟资产看板对齐（原来读 /api/inside/stats，两边差 41）
+  setKPI('kpi-ppt', aoFmt(s.total));
+  setKPI('kpi-ppt-sub', `${aoFmt(s.with_vlm)} / ${aoFmt(s.total)} VLM`);
+  setKPI('t-ppt-slides', aoFmt(s.total));
+  const vlmPct = s.total ? Math.round(s.with_vlm * 100 / s.total) : 0;
+  setKPI('t-vlm', vlmPct);
+  setKPI('t-vlm2', vlmPct);   // 两处都显示 VLM 覆盖率，id 不能重（重了只填得上第一个）
+  setKPI('kpi-text', aoFmt(b.text_atoms));
+  setKPI('t-text', aoFmt(b.text_atoms));
+  setKPI('t-atoms-text', aoFmt(b.text_atoms));
+  setKPI('kpi-links', aoFmt(f.edges));
+  if (snap.text_atoms && snap.text_atoms.by_kind) {
+    setKPI('kpi-text-sub', Object.entries(snap.text_atoms.by_kind)
+      .map(([k, n]) => `${k[0].toUpperCase()}${n}`).join(' '));
+  }
+  if (snap.memory) {
+    setKPI('kpi-analysis', aoFmt(snap.memory.analysis));
+    setKPI('kpi-persons', aoFmt(snap.memory.persons));
+  }
+}
+
+async function loadKPI() {
+    // 资产类指标一律由 loadAssetOverview() 从 data/assets/latest.json 填，
+    // 这里**只填快照里没有的东西**（数据源数、上次 ingest、内容库计数…）。
+    // 2026-08-11 之前两边各算各的：PPT 原子本页 1484 / 资产看板 1443，
+    // 文字原子本页读的 stats 块从没被更新过（漂到 480 vs 484）。
+    // 同一个指标两个页面给不同的数，用的人不知道该信谁 —— 比数不准更糟。
+    try {
+        const s = await (await fetch('/api/inside/stats', {cache:'no-store'})).json();
+        setKPI('kpi-sources', s.sources);   // 快照没测这一项，仍走 API
+        // 下面五项是**兜底**：快照读不到时总比空着强。
+        // 调用顺序保证正确性 —— loadKPI 先跑，loadAssetOverview 后跑并覆盖它们。
+        // 反过来就是旧口径盖掉准确值，所以那个顺序不是随手写的。
+        setKPI('kpi-ppt', s.ppt_atoms);
+        setKPI('kpi-text', s.text_total);
+        setKPI('kpi-links', s.relations);
+        setKPI('kpi-analysis', s.analysis_count);
+        setKPI('kpi-persons', s.person_count);
+
+        // hero 状态条
+        const health = await (await fetch('/api/inside/health', {cache:'no-store'})).json();
+        setKPI('last-ingest', health.last_report ? health.last_report.replace('run_','').replace('.md','').slice(0,8) : '—');
+
+        // 内容管理 / 发布 / 记忆 计数
+        try {
+            const [p, b, ar, rv, pr] = await Promise.all([
+                fetch('/api/inside/content/products', {cache:'no-store'}).then(r=>r.json()),
+                fetch('/api/inside/content/books', {cache:'no-store'}).then(r=>r.json()),
+                fetch('/api/inside/content/articles', {cache:'no-store'}).then(r=>r.json()),
+                fetch('/api/inside/review-data', {cache:'no-store'}).then(r=>r.json()),
+                fetch('/api/inside/memory/predictions', {cache:'no-store'}).then(r=>r.json()),
+            ]);
+            setKPI('t-products', p.count);
+            setKPI('t-books', b.count);
+            setKPI('t-articles', (ar.articles||ar.items||[]).length);
+            setKPI('t-pub', rv.public); setKPI('t-atoms-all', rv.total);
+            setKPI('t-preds', pr.count); setKPI('t-preds-wait', (pr.by_status||{})['待验证']||0);
+
+            fetch('/api/inside/subscriptions/summary', {cache:'no-store'}).then(r=>r.json()).then(sub => {
+                setKPI('t-sub-sources', sub.sources);
+                setKPI('t-sub-unread', sub.unread);
+            }).catch(()=>{});
+
+            // hero「待处理预测」= 已过验证窗口且仍待验证的
+            const nowYM = (d => d.getFullYear()*100 + (d.getMonth()+1))(new Date());
+            const endYM = w => {
+                if (!w) return null;
+                let m = w.match(/(\d{4})[-\s]*Q([1-4])/i);
+                if (m) return +m[1]*100 + [3,6,9,12][+m[2]-1];
+                m = w.match(/(\d{4})[-\/](\d{1,2})/);
+                if (m) return +m[1]*100 + +m[2];
+                m = w.match(/(\d{4})/);
+                return m ? +m[1]*100 + 12 : null;
+            };
+            const overdue = (pr.items||[]).filter(p =>
+                p.status === '待验证' && endYM(p.window) && endYM(p.window) < nowYM).length;
+            setKPI('overdue-count', overdue);
+        } catch (_) {}
+    } catch (e) {
+        console.warn('KPI via API 失败', e);
+    }
+}
+
+async function loadActivity() {
+    // 真实最近活动：从 recent API（reports + 分析档案）
+    try {
+        const j = await (await fetch('/api/inside/recent', {cache:'no-store'})).json();
+        const box = document.getElementById('activity');
+        if (!j.items || !j.items.length) {
+            box.innerHTML = '<div style="padding:24px;color:var(--ink-3);font-size:13px;">暂无活动记录</div>';
+            return;
+        }
+        box.innerHTML = j.items.map(it => {
+            const when = (it.time || '').replace('T', ' ').slice(0, 16);
+            return `<div class="act-item"><div class="when">${when}</div><div class="what">${it.summary || it.name}</div></div>`;
+        }).join('');
+    } catch (e) {
+        document.getElementById('activity').innerHTML = '<div style="padding:24px;color:var(--ink-3);font-size:13px;">API 未启动或未登录</div>';
+    }
+}
+
+// 顺序有意：先 loadKPI 让 API 兜底填上，再 loadAssetOverview 用快照覆盖。
+// 反过来的话 API 的旧口径会盖掉快照的准确值 —— 两者恰好在几个 id 上重叠。
+loadKPI().then(loadAssetOverview).catch(loadAssetOverview);
+loadActivity();
+</script>
+
+<script>(()=>{let group='全部';const cards=[...document.querySelectorAll('#app-center .tool-card')],search=document.querySelector('#app-search');function draw(){let count=0;for(const c of cards){c.hidden=!((group==='全部'||c.dataset.group===group)&&c.textContent.toLowerCase().includes(search.value.trim().toLowerCase()));if(!c.hidden)count++}document.querySelector('#app-count').textContent=count+' 个应用';document.querySelector('#app-empty').hidden=count>0}search.addEventListener('input',draw);document.querySelectorAll('#app-filters button').forEach(b=>b.onclick=()=>{group=b.dataset.filter;document.querySelectorAll('#app-filters button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));draw()});draw()})();</script></body>
+</html>
