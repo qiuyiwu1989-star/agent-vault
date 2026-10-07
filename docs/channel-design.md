@@ -17,3 +17,9 @@
 2026-10-05：新增 channel.py，首页、四栏目、BI 和文章正文通过同一服务端模板输出导航，替换旧 nav；无需 JavaScript 即可看到完整导航。个人主页/个人工作台移到右侧辅助区，文章增加所属栏目面包屑。nginx 仅将限定 Vault HTML 路由交给 sidecar，其余附件保持静态服务；解析路径后检查位于 ROOT 内。原始内容文件与 OpenClaw 产出未改动。
 
 备份 `/var/backups/agent-vault/20261005-115310-navigation/`。23项单测和隔离 production_acceptance 通过。正式 HTTPS 检查首页、四栏目、BI、日报正文：恰好一个共享导航，链接列表完全一致，无旧 nav，v5 CSS 已引用。未完成浏览器视觉验收。
+
+## 2026-10-07 后台独立应用区域
+
+`/admin/vault/app` 作为个人工作台的单一 Vault 入口，集中内容管理、阅读笔记、洞察、简报和 `/admin/vault/integrations` Agent 配置。后台页面共用应用导航，与公开频道栏目分开；原编辑及阅读地址保持可用。仅替换相关代码和后台卡片，不覆盖批注 SDK 等其他进展。
+
+备份 `/var/backups/agent-vault/20261007-132155-app/`。代码部署前与本地 HEAD 哈希一致；23单测、服务端模板检查、隔离生产回归通过。两个新页面正式域名匿名访问均要求登录；nginx -t及服务active通过。真实登录后的视觉/点击尚未验收。

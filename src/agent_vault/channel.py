@@ -9,7 +9,9 @@ def render_channel(content, path):
     links = ''.join('<a href="%s"%s>%s</a>' % (url, ' aria-current="page"' if (path in ('/vault/','/vault/index.html') if url=='/vault/' else path.startswith(url)) else '', name) for name,url in ITEMS)
     nav = '<nav class="vault-nav" aria-label="Vault 频道导航"><div class="vn-inner"><a class="vn-brand" href="/vault/">文档区<span>VAULT / QIU YIWU</span></a><div class="vn-links">'+links+'</div><div class="vn-aux"><a href="/">个人主页 ↗</a><a href="/admin/dashboard.html">个人工作台 ↗</a></div></div>'
     if admin:
-        nav += '<div class="vn-work">'+''.join('<a href="%s"%s>%s</a>'%(u,' aria-current="page"' if path==u else '',n) for n,u in [('← 个人工作台','/admin/dashboard.html'),('Vault 内容管理','/admin/vault/'),('阅读与笔记','/admin/vault/read'),('跨文章洞察','/admin/vault/insights'),('每日简报','/admin/vault/brief')])+'</div>'
+        sections=[('应用首页','/admin/vault/app'),('内容管理','/admin/vault/'),('阅读与笔记','/admin/vault/read'),('数据洞察','/admin/vault/insights'),('每日简报','/admin/vault/brief'),('Agent 接入','/admin/vault/integrations')]
+        app_links=''.join('<a href="%s"%s>%s</a>'%(u,' aria-current="page"' if path==u else '',n) for n,u in sections)
+        nav='<nav class="vault-nav" aria-label="Vault 应用导航"><div class="vn-inner"><a class="vn-brand" href="/admin/vault/app">Vault<span>知识与阅读管理</span></a><div class="vn-links">'+app_links+'</div><div class="vn-aux"><a href="/vault/">查看公开频道 ↗</a><a href="/admin/dashboard.html">← 个人工作台</a></div></div>'
     nav += '</nav>'
     for name,url in ITEMS[1:5]:
         if path.startswith(url) and path not in (url,url+'index.html'):

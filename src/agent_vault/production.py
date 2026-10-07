@@ -210,6 +210,9 @@ class Handler(BaseHTTPRequestHandler):
         if not self.authenticated():return self.reply(401,{'error':'请先登录后台'})
         try:
             u=urlsplit(self.path);q=parse_qs(u.query)
+            if u.path in ('/admin/vault/app','/admin/vault/integrations'):
+                name='app-home.html' if u.path.endswith('/app') else 'integrations.html'
+                return self.reply(200,(Path(__file__).parent/'web'/name).read_text(),'text/html; charset=utf-8')
             if u.path in ('/admin/vault/read','/admin/vault/insights','/admin/vault/brief'):
                 content=(Path(__file__).parent/'web/knowledge.html').read_text().replace('__VAULT_CSRF__',json.dumps(TOKEN))
                 return self.reply(200,content,'text/html; charset=utf-8')
