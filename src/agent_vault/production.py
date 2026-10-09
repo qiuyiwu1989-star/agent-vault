@@ -8,6 +8,7 @@ from urllib.error import HTTPError
 import psycopg2
 from psycopg2.extras import Json
 from .admin import ADMIN
+from .tts import synthesize
 from .annotations import AnnotationStore, AnnotationError
 from .channel import render_channel
 from .core import page, render_body
@@ -272,6 +273,7 @@ class Handler(BaseHTTPRequestHandler):
             n=int(self.headers.get('Content-Length',0))
             if not 0<n<=5_000_000:raise ValueError('请求大小无效')
             d=json.loads(self.rfile.read(n))
+            if self.path=='/api/inside/vault/knowledge/tts':return self.reply(200,synthesize(d.get('text')))
             if self.path=='/api/inside/vault/knowledge/note-save':return self.reply(200,KNOWLEDGE.note_save(d))
             if self.path=='/api/inside/vault/knowledge/entity-save':return self.reply(200,KNOWLEDGE.entity_save(d))
             if self.path=='/api/inside/vault/knowledge/pack':return self.reply(200,KNOWLEDGE.pack(d['ids'],d.get('include_notes') is True))
