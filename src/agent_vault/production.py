@@ -9,6 +9,7 @@ import psycopg2
 from psycopg2.extras import Json
 from .admin import ADMIN
 from .tts import synthesize
+from . import integration_docs
 from .annotations import AnnotationStore, AnnotationError
 from .channel import render_channel
 from .core import page, render_body
@@ -149,7 +150,7 @@ class Handler(BaseHTTPRequestHandler):
     def reply(self,status,obj,ctype='application/json; charset=utf-8'):
         if isinstance(obj,str) and ctype.startswith('text/html'):
             obj=render_channel(obj,urlsplit(self.path).path)
-        b=(obj if isinstance(obj,str) else json.dumps(obj,ensure_ascii=False)).encode();self.send_response(status)
+        b=obj if isinstance(obj,bytes) else (obj if isinstance(obj,str) else json.dumps(obj,ensure_ascii=False)).encode();self.send_response(status)
         for k,v in {'Content-Type':ctype,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','Content-Length':str(len(b))}.items():self.send_header(k,v)
         self.end_headers();self.wfile.write(b)
     def authenticated(self):
@@ -213,7 +214,9 @@ class Handler(BaseHTTPRequestHandler):
             u=urlsplit(self.path);q=parse_qs(u.query)
             if u.path in ('/admin/vault/app','/admin/vault/integrations'):
                 name='app-home.html' if u.path.endswith('/app') else 'integrations.html'
-                return self.reply(200,(Path(__file__).parent/'web'/name).read_text(),'text/html; charset=utf-8')
+                content=(Path(__file__).parent/'web'/name).read_text()
+                if name=='integrations.html':content=content.replace('</main>',integration_docs.panel()+'</main>',1)
+                return self.reply(200,content,'text/html; charset=utf-8')
             if u.path in ('/admin/vault/read','/admin/vault/insights','/admin/vault/brief'):
                 content=(Path(__file__).parent/'web/knowledge.html').read_text().replace('__VAULT_CSRF__',json.dumps(TOKEN))
                 return self.reply(200,content,'text/html; charset=utf-8')
@@ -227,6 +230,13 @@ class Handler(BaseHTTPRequestHandler):
                 if action=='related':return self.reply(200,KNOWLEDGE.related(arg('id')))
                 if action=='analytics':return self.reply(200,KNOWLEDGE.analytics(arg('start'),arg('end'),arg('collection')))
                 if action=='brief':return self.reply(200,KNOWLEDGE.brief(arg('day') or None))
+                if action=='integration-doc':return self.reply(200,integration_docs.document(arg('id')),'text/plain; charset=utf-8')
+                if action=='brief-audio':
+                    day=arg('day')
+                    if not re.fullmatch(r'\d{4}-\d{2}-\d{2}',day):raise ValueError('日期格式错误')
+                    audio=Path('/var/lib/agent-vault/tts')/(day+'.wav')
+                    if not audio.exists():return self.reply(404,{'error':'尚未生成本期完整音频'})
+                    return self.reply(200,audio.read_bytes(),'audio/wav')
                 if action=='mcp-config':
                     key=Path(os.environ.get('VAULT_AGENT_TOKEN_FILE','/var/lib/agent-vault/read-token')).read_text().strip()
                     return self.reply(200,{'mcpServers':{'vault':{'url':ORIGIN+'/api/vault-mcp','headers':{'Authorization':'Bearer '+key}}},'_notice':'Read-only corpus credential. Excludes private notes and unpublished drafts. Client configuration syntax may vary.'})

@@ -1,0 +1,85 @@
+{
+  "version": "1.0.0",
+  "updated": "2026-10-09",
+  "entries": [
+    {
+      "id": "vault-maintain",
+      "type": "skill",
+      "path": "skills/vault-maintain/SKILL.md",
+      "version": "1.0.0",
+      "sha256": "437944e7124c442ee6747b0014e1a41797302b35757a2b5ea0d7bf3d768d7090"
+    },
+    {
+      "id": "vault-daily-brief",
+      "type": "skill",
+      "path": "skills/vault-daily-brief/SKILL.md",
+      "version": "1.0.0",
+      "sha256": "3e29fcd77e1461091f19c5f363d647be453671a9fe1f199ae8f652bd1de48dce"
+    },
+    {
+      "id": "reading-archive",
+      "type": "skill",
+      "path": "skills/reading-archive/SKILL.md",
+      "version": "1.0.0",
+      "sha256": "52a5be6d01c891457d68a8ddeef3b4144b54eb664bc0b8d7670f050e49d61d60"
+    },
+    {
+      "id": "book-press",
+      "type": "skill",
+      "path": "skills/book-press/SKILL.md",
+      "version": "1.0.0",
+      "sha256": "b8215bd4f6225dfc8dc1cb95bd3230d8123b41c2af7613f24f9b82f1a9bdaafb"
+    },
+    {
+      "id": "builders-digest",
+      "type": "skill",
+      "path": "skills/builders-digest/SKILL.md",
+      "version": "1.0.0",
+      "sha256": "9cc019b03a7802951a753ad1b3a5c3ee59f3e83eb40890c844fc945b9f94f570"
+    },
+    {
+      "id": "contract-v1",
+      "type": "reference",
+      "path": "docs/contract-v1.md",
+      "version": "1.0.0",
+      "sha256": "ae8203c89d8ac581123d47ba9c67e337fe8e702a56295e5ea9012a70d60c7b80"
+    },
+    {
+      "id": "production",
+      "type": "reference",
+      "path": "docs/production.md",
+      "version": "1.0.0",
+      "sha256": "76dfa5a12cb24bd30434da3aff756d44b3fa52cabbcba5dcf22a0d875e814f45"
+    },
+    {
+      "id": "reading-intelligence",
+      "type": "reference",
+      "path": "docs/reading-intelligence.md",
+      "version": "1.0.0",
+      "sha256": "8d100f6c4aab6634218cfa73fbbd49317bf95f96d9da85d9711695590d84880c"
+    },
+    {
+      "id": "mimo-tts",
+      "type": "reference",
+      "path": "docs/mimo-tts.md",
+      "version": "1.0.0",
+      "sha256": "c796ddda27374ea27069b04e0c8447fdca0b2161ca3bee149df4d5dc83785005"
+    },
+    {
+      "id": "annotation-sdk-implementation",
+      "type": "reference",
+      "path": "docs/annotation-sdk-implementation.md",
+      "version": "1.0.0",
+      "sha256": "ca8232d5942938e1373d76699f232640dfeabde9ddae9d207ebae48f880868b8"
+    },
+    {
+      "id": "vault-readonly-mcp",
+      "type": "mcp",
+      "version": "1.0.0",
+      "path": "src/agent_vault/knowledge_mcp.py",
+      "endpoint": "https://qiuyiwu.com/api/vault-mcp",
+      "sha256": "cab4e6929950a7dc2402d8bbcbba4a1cff51e6a4e656cda5e94de126e8dfe97d",
+      "scope": "只读全文、搜索、实体与证据；不包含私人笔记"
+    }
+  ]
+}
