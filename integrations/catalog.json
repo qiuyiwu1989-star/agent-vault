@@ -1,6 +1,6 @@
 {
-  "version": "1.0.0",
-  "updated": "2026-10-09",
+  "version": "1.1.0",
+  "updated": "2026-10-11",
   "entries": [
     {
       "id": "vault-maintain",
@@ -80,6 +80,20 @@
       "endpoint": "https://qiuyiwu.com/api/vault-mcp",
       "sha256": "cab4e6929950a7dc2402d8bbcbba4a1cff51e6a4e656cda5e94de126e8dfe97d",
       "scope": "只读全文、搜索、实体与证据；不包含私人笔记"
+    },
+    {
+      "id": "video-archive",
+      "type": "skill",
+      "version": "1.0.0",
+      "path": "skills/video-archive/SKILL.md",
+      "sha256": "166e45ca46950f33d6778ee760e730170aa9398d2168e42210bc3478324ccc14"
+    },
+    {
+      "id": "video-import-contract",
+      "type": "reference",
+      "version": "1.0.0",
+      "path": "docs/video-import-contract.md",
+      "sha256": "a92968e81f3fab85dccca115b0ada95959372d53408fdbdc9c24d6ad83009b1b"
     }
   ]
 }
