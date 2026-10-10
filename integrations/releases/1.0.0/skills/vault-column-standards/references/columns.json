@@ -1,0 +1,113 @@
+{
+  "version": "1.0.0",
+  "enforcement": "editorial-contract-not-universal-runtime-validator",
+  "collections": [
+    {
+      "id": "reading",
+      "name": "阅读档案",
+      "input_requirements": [
+        "body_or_excerpt",
+        "source_reference"
+      ],
+      "summary_requirements": [
+        "claim",
+        "evidence",
+        "reasoning",
+        "limitations"
+      ],
+      "direct_submission": true
+    },
+    {
+      "id": "video",
+      "name": "视频频道",
+      "input_requirements": [
+        "original_url_or_file",
+        "source_platform",
+        "media_status"
+      ],
+      "summary_requirements": [
+        "overview",
+        "verified_timepoints",
+        "transcript_status",
+        "limitations"
+      ],
+      "direct_submission": true
+    },
+    {
+      "id": "books",
+      "name": "深度读书",
+      "input_requirements": [
+        "book_title",
+        "author",
+        "edition",
+        "coverage"
+      ],
+      "summary_requirements": [
+        "problem",
+        "models",
+        "book_evidence",
+        "boundaries",
+        "transfer_tests"
+      ],
+      "direct_submission": true
+    },
+    {
+      "id": "digest",
+      "name": "建造者观察",
+      "input_requirements": [
+        "source_reference",
+        "event_date",
+        "collected_at"
+      ],
+      "summary_requirements": [
+        "event",
+        "actor",
+        "evidence",
+        "change",
+        "implications"
+      ],
+      "direct_submission": true
+    },
+    {
+      "id": "html",
+      "name": "思考与作品",
+      "input_requirements": [
+        "problem",
+        "evidence",
+        "artifact_status"
+      ],
+      "summary_requirements": [
+        "proposal",
+        "assumptions",
+        "alternatives",
+        "validation"
+      ],
+      "direct_submission": true
+    },
+    {
+      "id": "seminar",
+      "name": "研讨沉淀",
+      "input_requirements": [
+        "transcript",
+        "speaker_context",
+        "privacy_scope"
+      ],
+      "summary_requirements": [
+        "questions",
+        "positions",
+        "disagreements",
+        "confirmed_conclusions",
+        "open_questions"
+      ],
+      "direct_submission": true
+    },
+    {
+      "id": "aggregate",
+      "direct_submission": false
+    },
+    {
+      "id": "analytics",
+      "direct_submission": false
+    }
+  ]
+}

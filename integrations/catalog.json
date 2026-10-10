@@ -1,5 +1,5 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
   "updated": "2026-10-11",
   "entries": [
     {
@@ -94,6 +94,20 @@
       "version": "1.0.0",
       "path": "docs/video-import-contract.md",
       "sha256": "a92968e81f3fab85dccca115b0ada95959372d53408fdbdc9c24d6ad83009b1b"
+    },
+    {
+      "id": "vault-column-standards",
+      "type": "skill",
+      "version": "1.0.0",
+      "path": "skills/vault-column-standards/SKILL.md",
+      "sha256": "ceb013ebc8475062e8b59a45d260a4c3d38457b9bd3c179eb8a47a084f8a2bb7"
+    },
+    {
+      "id": "vault-column-schema",
+      "type": "reference",
+      "version": "1.0.0",
+      "path": "skills/vault-column-standards/references/columns.json",
+      "sha256": "df831162f639300d2ed33a753870d68af7a481f25bf87e0a94e0b72ed03d8049"
     }
   ]
 }
