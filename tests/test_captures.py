@@ -49,3 +49,20 @@ class CaptureListPerformance(unittest.TestCase):
             self.assertEqual(result['items'][0]['ocr'],'中文');self.assertTrue(result['items'][0]['thumbnailURL'].startswith('/api/zhuazhua/'));sign.assert_not_called()
 
 if __name__=='__main__':unittest.main()
+
+class AttachmentImport(unittest.TestCase):
+    def test_duplicate_attachment_preserves_original_metadata(self):
+        from agent_vault import captures
+        from unittest.mock import MagicMock
+        cursor=MagicMock();cursor.fetchone.return_value=({'note':'保留备注','ocr':'原OCR','modifiedAt':'2020-01-01'},'existing-thumb')
+        connect=MagicMock();connect.return_value.__enter__.return_value.cursor.return_value.__enter__.return_value=cursor
+        with patch.object(captures,'validate',return_value=(b'png','a'*64,'image/png',(1,1),{'modifiedAt':'2026-01-01'})),patch.object(captures,'client') as client,patch.dict('os.environ',CAPTURE_COS_BUCKET='test'):
+            result=captures.upload(connect,{'attachmentOnly':True})
+        self.assertTrue(result['duplicate'])
+        self.assertFalse(any('UPDATE' in call.args[0] for call in cursor.execute.call_args_list))
+        client.return_value.put_object.assert_not_called()
+    def test_attachment_mode_must_be_boolean(self):
+        from agent_vault import captures
+        with patch.object(captures,'validate',return_value=(b'png','a'*64,'image/png',(1,1),{})):
+            for value in ('true',1,None):
+                with self.assertRaises(ValueError):captures.upload(None,{'attachmentOnly':value})

@@ -9,6 +9,8 @@ from urllib.parse import urlsplit, parse_qs
 from PIL import Image, ImageOps
 from psycopg2.extras import Json
 
+from . import notes, telemetry
+
 PREFIX = '/api/zhuazhua/'
 LIMIT = 64 * 1024 * 1024
 
@@ -20,6 +22,8 @@ def init(connect):
             metadata jsonb NOT NULL, received_at timestamptz NOT NULL DEFAULT now(),
             updated_at timestamptz NOT NULL DEFAULT now())''')
         c.execute('ALTER TABLE zhuazhua_captures ADD COLUMN IF NOT EXISTS thumbnail_key text')
+    notes.init(connect)
+    telemetry.init(connect)
     if os.environ.get('CAPTURE_COS_SECRET_ID'): client()
 
 @lru_cache(maxsize=1)
@@ -42,6 +46,16 @@ def detail(connect, digest):
     if not row: return None
     return dict(digest=digest,**row[0],width=row[1],height=row[2],
         imageURL=PREFIX+'image/'+digest,displayURL=signed_image(row[3],int(time.time()//300)))
+
+def note_images(connect, item):
+    if not item: return item
+    images=[]
+    if item.get('attachments'):
+        with connect() as db, db.cursor() as c:
+            c.execute('SELECT digest,object_key,width,height FROM zhuazhua_captures WHERE digest=ANY(%s)',(item['attachments'],))
+            rows=c.fetchall()
+        images=[dict(digest=d,imageURL=PREFIX+'image/'+d,displayURL=signed_image(key,int(time.time()//300)),width=w,height=h) for d,key,w,h in rows]
+    return dict(item,attachmentImages=images)
 
 def device(handler):
     expected = os.environ.get('CAPTURE_DEVICE_SHA256', '')
@@ -95,6 +109,8 @@ def thumbnail(cos, bucket, digest, raw):
 
 def upload(connect, data):
     raw,digest,mime,(width,height),meta = validate(data)
+    attachment_only=data.get('attachmentOnly',False)
+    if type(attachment_only) is not bool: raise ValueError('附件导入模式无效')
     key='zhuazhua/raw/'+digest[:2]+'/'+digest
     cos=client(); bucket=os.environ['CAPTURE_COS_BUCKET']
     with connect() as db, db.cursor() as c:
@@ -108,7 +124,7 @@ def upload(connect, data):
             if int(head.get('Content-Length',head.get('content-length',-1))) != len(raw): raise RuntimeError('COS size verification failed')
             c.execute('INSERT INTO zhuazhua_captures(digest,object_key,mime,size,width,height,metadata) VALUES(%s,%s,%s,%s,%s,%s,%s)',
                 (digest,key,mime,len(raw),width,height,Json(meta)))
-        elif meta['modifiedAt'] >= old[0].get('modifiedAt',''):
+        elif not attachment_only and meta['modifiedAt'] >= old[0].get('modifiedAt',''):
             c.execute('UPDATE zhuazhua_captures SET metadata=%s,updated_at=now() WHERE digest=%s',(Json(meta),digest))
         if old is None or not old[1]:
             thumb=thumbnail(cos,bucket,digest,raw)
@@ -136,14 +152,27 @@ def handle(handler, connect, method):
     if path!='/vault/inbox/' and not path.startswith(PREFIX): return False
     if handler.headers.get('Origin') not in (None,'https://qiuyiwu.com'):
         handler.reply(403,{'error':'来源不允许'}); return True
-    allowed=device(handler) or (method=='GET' and handler.authenticated())
+    is_device=device(handler)
+    allowed=is_device or ((method=='GET' or handler.headers.get('Origin')=='https://qiuyiwu.com') and handler.authenticated())
     if not allowed:
         if path=='/vault/inbox/':
             handler.send_response(302); handler.send_header('Location','/admin/login.html?next=/vault/inbox/'); handler.send_header('Cache-Control','no-store');handler.end_headers()
         else: handler.reply(401,{'error':'请登录知行档案或连接爪爪设备'})
         return True
     try:
-        if method=='POST' and path==PREFIX+'captures':
+        if method=='POST' and path in (PREFIX+'notes',PREFIX+'events'):
+            n=int(handler.headers.get('Content-Length','0'))
+            limit=4096 if path.endswith('/events') else 2*1024*1024
+            if not 0<n<=limit: raise ValueError('请求大小无效')
+            data=json.loads(handler.rfile.read(n))
+            if path.endswith('/events'): handler.reply(200,telemetry.record(connect,data))
+            else: handler.reply(200,{'ok':True,'note':note_images(connect,notes.upsert(connect,data))})
+        elif method=='GET' and path==PREFIX+'notes': handler.reply(200,notes.listing(connect,parse_qs(urlsplit(handler.path).query)))
+        elif method=='GET' and re.fullmatch(PREFIX+r'notes/[0-9a-fA-F-]{36}',path):
+            item=notes.detail(connect,path.rsplit('/',1)[-1])
+            handler.reply(200 if item else 404,note_images(connect,item) if item else {'error':'笔记不存在'})
+        elif method=='GET' and path==PREFIX+'metrics': handler.reply(200,telemetry.metrics(connect,parse_qs(urlsplit(handler.path).query)))
+        elif method=='POST' and path==PREFIX+'captures':
             n=int(handler.headers.get('Content-Length','0'))
             if not 0<n<=90*1024*1024: raise ValueError('请求大小无效')
             handler.reply(200,upload(connect,json.loads(handler.rfile.read(n))))
@@ -165,8 +194,10 @@ def handle(handler, connect, method):
         elif method=='GET' and path=='/vault/inbox/':
             handler.reply(200,(Path(__file__).parent/'web/capture-inbox.html').read_text(),'text/html; charset=utf-8')
         else: handler.reply(404,{'error':'接口不存在'})
+    except notes.Conflict as e: handler.reply(409,{'error':'笔记已有更新，请保留本地草稿并重新载入','code':'version_conflict','current':e.current})
+    except telemetry.RateLimited: handler.reply(429,{'error':'体验数据提交过于频繁'})
     except (ValueError,TypeError,KeyError) as e: handler.reply(400,{'error':str(e)})
     except Exception:
         # Never print cloud exception objects: they can contain signed request data.
-        handler.reply(503,{'error':'同步服务暂时不可用，本地原图仍保留，请重试'})
+        handler.reply(503,{'error':'保存服务暂时不可用，请保留当前内容并重试'})
     return True
