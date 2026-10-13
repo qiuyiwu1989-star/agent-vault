@@ -2,7 +2,7 @@
 import re
 from html import escape
 
-ITEMS = [('全部内容','/vault/'),('阅读档案','/vault/reading/'),('榨书档案','/vault/books/'),('建造者日报','/vault/digest/'),('分析文稿','/vault/html/'),('数据洞察','/vault/analytics.html')]
+ITEMS = [('全部内容','/vault/'),('阅读档案','/vault/reading/'),('榨书档案','/vault/books/'),('建造者日报','/vault/digest/'),('分析文稿','/vault/html/'),('爪爪收件箱','/vault/inbox/'),('数据洞察','/vault/analytics.html')]
 
 def render_channel(content, path):
     admin = path.startswith('/admin/vault')

@@ -9,7 +9,7 @@ import psycopg2
 from psycopg2.extras import Json
 from .admin import ADMIN
 from .tts import synthesize
-from . import integration_docs
+from . import integration_docs, captures
 from .annotations import AnnotationStore, AnnotationError
 from .channel import render_channel
 from .core import page, render_body
@@ -41,7 +41,7 @@ ANNOTATIONS=AnnotationStore(connect,{"vault": lambda ident: (lambda d: d if d["k
 def init():
     with connect() as db,db.cursor() as c:
         c.execute('CREATE TABLE IF NOT EXISTS documents(id text PRIMARY KEY,path text UNIQUE NOT NULL,published integer NOT NULL DEFAULT 0); CREATE TABLE IF NOT EXISTS revisions(id text REFERENCES documents(id),revision integer,record jsonb NOT NULL,created timestamptz DEFAULT now(),PRIMARY KEY(id,revision)); CREATE TABLE IF NOT EXISTS publications(id bigserial PRIMARY KEY,document text,revision integer,before_bytes bytea,after_hash text,state text,created timestamptz DEFAULT now());')
-    scan();KNOWLEDGE.init();ANNOTATIONS.init()
+    scan();KNOWLEDGE.init();ANNOTATIONS.init();captures.init(connect)
 def scan():
     with LOCK,connect() as db,db.cursor() as c:
         c.execute('SELECT pg_advisory_xact_lock(5095001)')
@@ -175,6 +175,7 @@ class Handler(BaseHTTPRequestHandler):
         except OSError:return False
         return bool(token) and secrets.compare_digest(self.headers.get('Authorization',''),'Bearer '+token)
     def do_GET(self):
+        if captures.handle(self,connect,"GET"): return
         asset=urlsplit(self.path).path
         sdk_assets={
           '/vault/annotation/index.js':'sdk/annotation/src/index.js',
@@ -257,6 +258,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(200,ANNOTATIONS.update(owner,*parts,json.loads(self.rfile.read(n))))
         except (AnnotationError,ValueError,TypeError) as e:return self.reply(409,{'error':str(e)})
     def do_POST(self):
+        if captures.handle(self,connect,"POST"): return
         if self.annotation_path():
             owner=self.annotation_owner()
             if not owner:return self.reply(401,{'error':'请先登录个人工作台'})
