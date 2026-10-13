@@ -1,8 +1,62 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>爪爪收件箱 · 知行档案</title><style>
-*{box-sizing:border-box}[hidden]{display:none!important}body{margin:0;background:#f7f5ef;color:#28372f;font:15px/1.6 system-ui}main{max-width:1440px;margin:auto;padding:32px}a{color:#34664e}header{display:flex;justify-content:space-between;align-items:center;gap:20px}h1{font-size:32px;margin:8px 0}p{color:#68746c}nav,.filters{display:flex;gap:12px;flex-wrap:wrap}input,button{font:inherit;padding:9px 14px;background:white;border:1px solid #d2d9d0;border-radius:9px}button{cursor:pointer;color:inherit}button:disabled{opacity:.5}input[type=search]{flex:1;min-width:220px}.filters{margin:28px 0 12px}#grid{columns:260px;column-gap:20px}.card{display:block;width:100%;break-inside:avoid;margin:0 0 20px;padding:0;overflow:hidden;text-align:left;border-radius:14px;background:white}.card img{display:block;width:100%;height:auto}.caption{padding:12px 15px}.caption strong{display:block;overflow-wrap:anywhere}.caption small{color:#768078}dialog{width:min(1200px,96vw);max-height:94vh;border:0;border-radius:18px;padding:20px;background:#faf9f5}dialog::backdrop{background:#17251ec7}.detail{display:grid;grid-template-columns:minmax(0,2fr) minmax(240px,1fr);gap:24px;margin-top:16px}#original{width:100%;max-height:74vh;object-fit:contain}pre{white-space:pre-wrap;font:inherit;overflow-wrap:anywhere;max-height:35vh;overflow:auto}#more{display:block;margin:24px auto}#status{min-height:28px}#login{display:none}@media(max-width:700px){main{padding:18px}.detail{grid-template-columns:1fr}header{align-items:start;flex-direction:column}}
-</style></head><body><main><header><div><a href="/vault/">← 知行档案</a><h1>爪爪收件箱</h1><p>随手收集，慢慢整理。原图、文字与采集时间一起留下。</p></div><nav><span>私人资料 · 登录可见</span><button id="refresh">刷新</button></nav></header><div class="filters"><input id="q" type="search" placeholder="搜索图片名称、OCR、备注或标签" aria-label="搜索收件箱"><input id="day" type="date" aria-label="采集日期"><button id="clear">全部日期</button></div><p id="status" role="status">正在读取收件箱…</p><a id="login" href="/admin/login.html?next=/vault/inbox/">登录后查看</a><section id="grid" aria-label="采集图片"></section><button id="more" hidden>加载更多</button><dialog id="detail"><header><strong id="title"></strong><button id="close">关闭 Esc</button></header><div class="detail"><a id="full" target="_blank" rel="noopener"><img id="original" alt="原图预览"></a><aside><p id="date"></p><p id="tags"></p><h3>备注</h3><pre id="note"></pre><h3>识别文字</h3><button id="copy">复制文字</button><pre id="ocr"></pre><a id="download" download>保存原图</a></aside></div></dialog></main><script>
-const $=id=>document.getElementById(id);let offset=0,generation=0,timer,current=null,loading=false;
-function show(item){current=item;$('title').textContent=item.name||'未命名图片';$('original').src=$('full').href=$('download').href=item.imageURL;$('download').download=item.name||'capture';$('date').textContent='采集于 '+new Date(item.collectedAt).toLocaleString('zh-CN')+' · '+item.width+' × '+item.height;$('tags').textContent=item.tags?'标签：'+item.tags:'';$('note').textContent=item.note||'暂无备注';$('ocr').textContent=item.ocr||'暂无识别文字';$('detail').showModal()}
-async function load(reset=true){const gen=++generation;if(reset){offset=0;$('grid').replaceChildren()}loading=true;$('more').disabled=true;$('status').textContent='正在读取…';try{const response=await fetch('/api/zhuazhua/captures?'+new URLSearchParams({q:$('q').value,day:$('day').value,offset}),{credentials:'same-origin'});if(response.status===401){$('login').style.display='inline';throw Error('登录已过期，请重新登录')}if(!response.ok)throw Error('暂时无法加载，点击刷新重试');const data=await response.json();if(gen!==generation)return;for(const item of data.items){const card=document.createElement('button');card.className='card';card.onclick=()=>show(item);const img=document.createElement('img');img.src=item.thumbnailURL;img.loading='lazy';img.alt=item.name||'采集图片';img.width=item.width;img.height=item.height;const caption=document.createElement('div');caption.className='caption';const name=document.createElement('strong');name.textContent=item.name;const date=document.createElement('small');date.textContent=new Date(item.collectedAt).toLocaleString('zh-CN');caption.append(name,date);card.append(img,caption);$('grid').append(card)}offset+=data.items.length;$('more').hidden=!data.more;$('status').textContent=offset?'已展示 '+offset+' 张 · 按采集时间排列':'这里还没有匹配的图片。可以从爪爪同步一张。';}catch(e){if(gen===generation)$('status').textContent=e.message}finally{if(gen===generation){loading=false;$('more').disabled=false}}}
-$('q').oninput=()=>{clearTimeout(timer);timer=setTimeout(()=>load(),250)};$('day').onchange=()=>load();$('clear').onclick=()=>{$('day').value='';load()};$('refresh').onclick=()=>load();$('more').onclick=()=>{if(!loading)load(false)};$('close').onclick=()=>$('detail').close();$('copy').onclick=async()=>{try{await navigator.clipboard.writeText(current?.ocr||'');$('copy').textContent='已复制';setTimeout(()=>$('copy').textContent='复制文字',1500)}catch{$('copy').textContent='请选择下方文字复制'}};load();
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>爪爪收件箱 · 知行档案</title>
+<style>
+*{box-sizing:border-box}[hidden]{display:none!important}body{margin:0;font:15px/1.6 system-ui}
+#inbox{max-width:1800px;margin:auto;padding:24px 32px}#inbox .inbox-head{display:flex;align-items:center;gap:20px;justify-content:space-between}#inbox h1{font-size:24px;margin:0}#inbox .filters{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:20px 0 12px}#inbox input,#inbox button{font:inherit;color:inherit}#inbox input,.inbox-action{padding:9px 14px;border:1px solid #a5a89f66;border-radius:10px;background:var(--v-bg,#faf9f5)}#inbox input[type=search]{flex:1;min-width:180px}button{cursor:pointer}button:disabled{opacity:.5}#status{font-size:13px;color:var(--v-muted,#74766d);min-height:24px;margin:8px 0 16px}#grid{position:relative;width:100%}
+#grid .pin{position:absolute;display:block;margin:0;padding:0;border:0;border-radius:14px;overflow:hidden;background:#dadbd533;box-shadow:none;text-align:left;isolation:isolate;cursor:zoom-in}#grid .pin img{display:block;width:100%;height:100%;object-fit:contain;opacity:0;transition:opacity .18s}#grid .pin.loaded img{opacity:1}#grid .pin:hover{box-shadow:0 0 0 2px #72796b66}#grid .pin:focus-visible{outline:3px solid #3c765f;outline-offset:3px}#grid .pin.failed:after{content:'加载失败 · 点击重试';position:absolute;inset:0;display:grid;place-items:center;font-size:13px;background:var(--v-bg,#faf9f5)}#more{display:block;margin:20px auto}#sentinel{height:1px}#login{display:none}
+#detail{width:min(1200px,96vw);max-height:94vh;border:0;border-radius:18px;padding:22px;color:var(--v-ink,#28372f);background:var(--v-bg,#faf9f5)}#detail::backdrop{background:#17251ec7}#detail header{display:flex;justify-content:space-between;gap:20px;align-items:center}#title{overflow-wrap:anywhere}#detail .detail-body{display:grid;grid-template-columns:minmax(0,2fr) minmax(240px,1fr);gap:24px;margin-top:16px}#original{width:100%;max-height:74vh;object-fit:contain}#detail pre{white-space:pre-wrap;font:inherit;overflow-wrap:anywhere;max-height:35vh;overflow:auto}#detail a{color:#54846a}#detail-status{font-size:13px}#detail aside{min-width:0}
+@media(max-width:700px){#inbox{padding:18px 14px}#inbox h1{font-size:21px}#inbox input[type=date]{max-width:145px}#detail .detail-body{grid-template-columns:1fr}}@media(prefers-reduced-motion:reduce){#grid .pin img{transition:none}}
+</style></head><body><main id="inbox">
+<header class="inbox-head"><h1>爪爪收件箱</h1><button class="inbox-action" id="refresh">刷新</button></header>
+<div class="filters"><input id="q" type="search" placeholder="搜索图片里的文字、备注或标签" aria-label="搜索收件箱"><input id="day" type="date" aria-label="采集日期"><button class="inbox-action" id="clear">全部日期</button></div>
+<p id="status" role="status">正在加载图片…</p><a id="login" href="/admin/login.html?next=/vault/inbox/">登录后查看</a>
+<section id="grid" aria-label="图片瀑布流"></section><div id="sentinel"></div><button class="inbox-action" id="more" hidden>加载更多</button>
+<dialog id="detail"><header><strong id="title"></strong><button class="inbox-action" id="close">关闭 Esc</button></header><p id="detail-status" role="status"></p><div class="detail-body"><a id="full" target="_blank" rel="noopener noreferrer"><img id="original" alt="原图预览" referrerpolicy="no-referrer"></a><aside><p id="date"></p><p id="tags"></p><h3>备注</h3><pre id="note"></pre><h3>识别文字</h3><button class="inbox-action" id="copy">复制文字</button><pre id="ocr"></pre><a id="download" download>保存原图</a></aside></div></dialog>
+<script>
+const $=id=>document.getElementById(id);
+let offset=0,generation=0,timer,current=null,loading=false,hasMore=false,controller,detailGeneration=0;
+let pins=[];const seen=new Set();
+function layout(){
+ const width=$('grid').clientWidth,gap=width<640?10:16;
+ const columns=width<640?(width<300?1:2):Math.max(2,Math.floor((width+gap)/240));
+ const cardWidth=(width-gap*(columns-1))/columns,heights=Array(columns).fill(0);
+ for(const {card,item} of pins){const column=heights.indexOf(Math.min(...heights));const height=cardWidth*item.height/item.width;
+  Object.assign(card.style,{width:cardWidth+'px',height:height+'px',left:column*(cardWidth+gap)+'px',top:heights[column]+'px'});heights[column]+=height+gap;
+ }
+ $('grid').style.height=Math.max(0,...heights)- (pins.length?gap:0)+'px';
+}
+new ResizeObserver(layout).observe($('grid'));
+function append(item){
+ if(seen.has(item.digest))return;seen.add(item.digest);
+ const card=document.createElement('button');card.className='pin';card.setAttribute('aria-label','预览：'+(item.name||'采集图片'));
+ const img=document.createElement('img');img.alt='';img.width=item.width;img.height=item.height;img.decoding='async';img.loading=pins.length<6?'eager':'lazy';img.referrerPolicy='no-referrer';if(pins.length<3)img.fetchPriority='high';
+ img.onload=()=>{card.classList.add('loaded');card.classList.remove('failed')};img.onerror=()=>card.classList.add('failed');
+ card.onclick=()=>{if(card.classList.contains('failed')){card.classList.remove('failed');img.src='/api/zhuazhua/thumbnail/'+item.digest+'?retry='+Date.now()}else show(item)};
+ img.src=item.thumbnailURL;card.append(img);$('grid').append(card);pins.push({card,item});
+}
+async function show(item){
+ const gen=++detailGeneration;current=null;$('title').textContent=item.name||'采集图片';$('original').src=item.thumbnailURL;
+ $('full').removeAttribute('href');$('download').removeAttribute('href');$('date').textContent='';$('tags').textContent='';$('note').textContent='';$('ocr').textContent='';$('copy').disabled=true;$('detail-status').textContent='正在读取原图与笔记…';$('detail').showModal();
+ try{const response=await fetch('/api/zhuazhua/captures/'+item.digest,{credentials:'same-origin'});if(!response.ok)throw Error('详情暂时无法加载，请关闭后重试');const data=await response.json();if(gen!==detailGeneration)return;current=data;
+ $('date').textContent='采集于 '+new Date(data.collectedAt).toLocaleString('zh-CN')+' · '+data.width+' × '+data.height;
+ $('tags').textContent=data.tags?'标签：'+data.tags:'';$('note').textContent=data.note||'暂无备注';$('ocr').textContent=data.ocr||'暂无识别文字';$('copy').disabled=!data.ocr;
+ $('full').href=data.displayURL;$('download').href=data.imageURL;$('download').download=data.name||'capture';
+ const original=new Image();original.referrerPolicy='no-referrer';original.onload=()=>{if(gen===detailGeneration){$('original').src=original.src;$('detail-status').textContent=''}};original.onerror=()=>{if(gen===detailGeneration)$('detail-status').textContent='原图加载失败，当前显示缩略图，可点击图片重试'};original.src=data.displayURL;
+ }catch(e){if(gen===detailGeneration)$('detail-status').textContent=e.message}
+}
+async function load(reset=true){
+ if(!reset&&(loading||!hasMore))return;
+ if(reset){controller?.abort();generation++;offset=0;hasMore=false;pins=[];seen.clear();$('grid').replaceChildren();layout()}
+ const gen=generation;controller=new AbortController();loading=true;$('more').disabled=true;$('status').textContent='正在加载图片…';
+ try{const response=await fetch('/api/zhuazhua/captures?'+new URLSearchParams({q:$('q').value,day:$('day').value,offset,summary:'1',limit:'24'}),{credentials:'same-origin',signal:controller.signal});
+ if(response.status===401){$('login').style.display='inline';throw Error('登录已过期，请重新登录')}if(!response.ok)throw Error('加载失败，点击刷新重试');const data=await response.json();if(gen!==generation)return;
+ data.items.forEach(append);offset+=data.items.length;hasMore=data.more;layout();$('login').style.display='none';$('more').hidden=!hasMore;$('status').textContent=pins.length?pins.length+' 张':'没有匹配的图片';
+ }catch(e){if(e.name!=='AbortError'&&gen===generation){hasMore=false;$('more').hidden=true;$('status').textContent=e.message}}
+ finally{if(gen===generation){loading=false;$('more').disabled=false;requestAnimationFrame(()=>{if(hasMore&&$('sentinel').getBoundingClientRect().top<innerHeight+500)load(false)})}}
+}
+new IntersectionObserver(entries=>{if(entries.some(e=>e.isIntersecting))load(false)},{rootMargin:'500px'}).observe($('sentinel'));
+$('q').oninput=()=>{clearTimeout(timer);controller?.abort();generation++;timer=setTimeout(()=>load(),250)};$('day').onchange=()=>load();$('clear').onclick=()=>{$('day').value='';load()};$('refresh').onclick=()=>load();$('more').onclick=()=>load(false);
+$('close').onclick=()=>$('detail').close();$('detail').onclose=()=>{detailGeneration++;$('original').removeAttribute('src')};
+$('copy').onclick=async()=>{try{await navigator.clipboard.writeText(current?.ocr||'');$('copy').textContent='已复制';setTimeout(()=>$('copy').textContent='复制文字',1500)}catch{$('copy').textContent='请选择下方文字复制'}};
+load();
 </script></body></html>

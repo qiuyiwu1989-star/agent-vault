@@ -1,7 +1,8 @@
 """Private ZhuaZhua inbox. COS stores bytes; PostgreSQL stores metadata.
 Device credentials authorize only these routes, never the rest of Vault.
 """
-import base64, hashlib, hmac, io, json, os, re
+import base64, hashlib, hmac, io, json, os, re, time
+from functools import lru_cache
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlsplit, parse_qs
@@ -19,12 +20,28 @@ def init(connect):
             metadata jsonb NOT NULL, received_at timestamptz NOT NULL DEFAULT now(),
             updated_at timestamptz NOT NULL DEFAULT now())''')
         c.execute('ALTER TABLE zhuazhua_captures ADD COLUMN IF NOT EXISTS thumbnail_key text')
+    if os.environ.get('CAPTURE_COS_SECRET_ID'): client()
 
+@lru_cache(maxsize=1)
 def client():
     from qcloud_cos import CosConfig, CosS3Client
     return CosS3Client(CosConfig(Region=os.environ['CAPTURE_COS_REGION'],
         SecretId=os.environ['CAPTURE_COS_SECRET_ID'], SecretKey=os.environ['CAPTURE_COS_SECRET_KEY'],
         Scheme='https', Timeout=60))
+
+@lru_cache(maxsize=1024)
+def signed_image(key, window):
+    # Reuse signatures briefly so browser caches survive refreshes. No public ACL.
+    return client().get_presigned_url(Bucket=os.environ['CAPTURE_COS_BUCKET'],
+        Key=key,Method='GET',Expired=900,Params={'response-cache-control':'private, max-age=600'})
+
+def detail(connect, digest):
+    with connect() as db, db.cursor() as c:
+        c.execute('SELECT metadata,width,height,object_key FROM zhuazhua_captures WHERE digest=%s',(digest,))
+        row=c.fetchone()
+    if not row: return None
+    return dict(digest=digest,**row[0],width=row[1],height=row[2],
+        imageURL=PREFIX+'image/'+digest,displayURL=signed_image(row[3],int(time.time()//300)))
 
 def device(handler):
     expected = os.environ.get('CAPTURE_DEVICE_SHA256', '')
@@ -102,14 +119,17 @@ def listing(connect, query):
     q=query.get('q',[''])[0][:300].lower()
     offset=max(0,min(100000,int(query.get('offset',['0'])[0])))
     day=query.get('day',[''])[0]
+    compact=query.get('summary',[''])[0]=='1'
+    limit=max(1,min(60,int(query.get('limit',['24' if compact else '60'])[0])))
     if day and not re.fullmatch(r'\d{4}-\d{2}-\d{2}',day): raise ValueError('日期无效')
     with connect() as db, db.cursor() as c:
-        c.execute('''SELECT digest,metadata,received_at::text,width,height FROM zhuazhua_captures
+        metadata="jsonb_build_object('name',metadata->'name')" if compact else 'metadata'
+        c.execute('''SELECT digest,'''+metadata+''',received_at::text,width,height,thumbnail_key FROM zhuazhua_captures
             WHERE (%s='' OR strpos(lower(metadata::text),%s)>0)
             AND (%s='' OR to_char((metadata->>'collectedAt')::timestamptz AT TIME ZONE 'Asia/Shanghai','YYYY-MM-DD')=%s)
-            ORDER BY (metadata->>'collectedAt')::timestamptz DESC,digest LIMIT 61 OFFSET %s''',(q,q,day,day,offset))
+            ORDER BY (metadata->>'collectedAt')::timestamptz DESC,digest LIMIT %s OFFSET %s''',(q,q,day,day,limit+1,offset))
         rows=c.fetchall()
-    return {'items':[dict(digest=d,**m,receivedAt=t,width=w,height=h,imageURL=PREFIX+'image/'+d,thumbnailURL=PREFIX+'thumbnail/'+d) for d,m,t,w,h in rows[:60]],'more':len(rows)>60}
+    return {'items':[dict(digest=d,**m,receivedAt=t,width=w,height=h,imageURL=PREFIX+'image/'+d,thumbnailURL=(signed_image(key,int(time.time()//300)) if compact and key else PREFIX+'thumbnail/'+d)) for d,m,t,w,h,key in rows[:limit]],'more':len(rows)>limit}
 
 def handle(handler, connect, method):
     path=urlsplit(handler.path).path
@@ -128,6 +148,9 @@ def handle(handler, connect, method):
             if not 0<n<=90*1024*1024: raise ValueError('请求大小无效')
             handler.reply(200,upload(connect,json.loads(handler.rfile.read(n))))
         elif method=='GET' and path==PREFIX+'captures': handler.reply(200,listing(connect,parse_qs(urlsplit(handler.path).query)))
+        elif method=='GET' and re.fullmatch(PREFIX+r'captures/[a-f0-9]{64}',path):
+            item=detail(connect,path.rsplit('/',1)[-1])
+            handler.reply(200 if item else 404,item or {'error':'图片不存在'})
         elif method=='GET' and re.fullmatch(PREFIX+r'(?:image|thumbnail)/[a-f0-9]{64}',path):
             digest=path.rsplit('/',1)[-1]
             with connect() as db, db.cursor() as c:
