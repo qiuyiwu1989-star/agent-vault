@@ -9,3 +9,9 @@ build/
 *.sqlite*
 
 .DS_Store
+
+.live-audit-*/
+deliverables/
+.env.*
+*.pem
+*.key

@@ -9,6 +9,9 @@ description = "Agent-neutral, revisioned knowledge document publishing"
 requires-python = ">=3.10"
 dependencies = []
 
+[project.optional-dependencies]
+production = ["psycopg2-binary>=2.9,<3", "Pillow>=10,<13", "cos-python-sdk-v5>=1.9,<2"]
+
 [project.scripts]
 vault = "agent_vault.cli:main"
 

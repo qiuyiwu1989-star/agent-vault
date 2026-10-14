@@ -1,0 +1,242 @@
+{
+  "date": "2026-10-14",
+  "source": "production source-only snapshot; no live data or environment files",
+  "files": [
+    {
+      "path": "integrations/CHANGELOG.md",
+      "sha256": "3fb1d4889007b55eabc0729a0241aae64908ffd174f1931103dabdcd912895dc"
+    },
+    {
+      "path": "integrations/catalog.json",
+      "sha256": "987a08788e26e821175457ba3dadbb35cef8d73842a5824f7b15e6b2a73b71d5"
+    },
+    {
+      "path": "integrations/releases/1.0.0/docs/annotation-sdk-implementation.md",
+      "sha256": "ca8232d5942938e1373d76699f232640dfeabde9ddae9d207ebae48f880868b8"
+    },
+    {
+      "path": "integrations/releases/1.0.0/docs/contract-v1.md",
+      "sha256": "ae8203c89d8ac581123d47ba9c67e337fe8e702a56295e5ea9012a70d60c7b80"
+    },
+    {
+      "path": "integrations/releases/1.0.0/docs/mimo-tts.md",
+      "sha256": "c796ddda27374ea27069b04e0c8447fdca0b2161ca3bee149df4d5dc83785005"
+    },
+    {
+      "path": "integrations/releases/1.0.0/docs/production.md",
+      "sha256": "76dfa5a12cb24bd30434da3aff756d44b3fa52cabbcba5dcf22a0d875e814f45"
+    },
+    {
+      "path": "integrations/releases/1.0.0/docs/reading-intelligence.md",
+      "sha256": "8d100f6c4aab6634218cfa73fbbd49317bf95f96d9da85d9711695590d84880c"
+    },
+    {
+      "path": "integrations/releases/1.0.0/docs/video-import-contract.md",
+      "sha256": "a92968e81f3fab85dccca115b0ada95959372d53408fdbdc9c24d6ad83009b1b"
+    },
+    {
+      "path": "integrations/releases/1.0.0/skills/book-press/SKILL.md",
+      "sha256": "b8215bd4f6225dfc8dc1cb95bd3230d8123b41c2af7613f24f9b82f1a9bdaafb"
+    },
+    {
+      "path": "integrations/releases/1.0.0/skills/builders-digest/SKILL.md",
+      "sha256": "9cc019b03a7802951a753ad1b3a5c3ee59f3e83eb40890c844fc945b9f94f570"
+    },
+    {
+      "path": "integrations/releases/1.0.0/skills/reading-archive/SKILL.md",
+      "sha256": "52a5be6d01c891457d68a8ddeef3b4144b54eb664bc0b8d7670f050e49d61d60"
+    },
+    {
+      "path": "integrations/releases/1.0.0/skills/vault-column-standards/SKILL.md",
+      "sha256": "ceb013ebc8475062e8b59a45d260a4c3d38457b9bd3c179eb8a47a084f8a2bb7"
+    },
+    {
+      "path": "integrations/releases/1.0.0/skills/vault-column-standards/references/columns.json",
+      "sha256": "df831162f639300d2ed33a753870d68af7a481f25bf87e0a94e0b72ed03d8049"
+    },
+    {
+      "path": "integrations/releases/1.0.0/skills/vault-daily-brief/SKILL.md",
+      "sha256": "3e29fcd77e1461091f19c5f363d647be453671a9fe1f199ae8f652bd1de48dce"
+    },
+    {
+      "path": "integrations/releases/1.0.0/skills/vault-daily-brief/scripts/generate.py",
+      "sha256": "3c03f85eff7277fb2f61d77022de99bab5849a12108b2f526656e572fb0c8db8"
+    },
+    {
+      "path": "integrations/releases/1.0.0/skills/vault-maintain/SKILL.md",
+      "sha256": "437944e7124c442ee6747b0014e1a41797302b35757a2b5ea0d7bf3d768d7090"
+    },
+    {
+      "path": "integrations/releases/1.0.0/skills/video-archive/SKILL.md",
+      "sha256": "166e45ca46950f33d6778ee760e730170aa9398d2168e42210bc3478324ccc14"
+    },
+    {
+      "path": "integrations/releases/1.0.0/src/agent_vault/knowledge_mcp.py",
+      "sha256": "cab4e6929950a7dc2402d8bbcbba4a1cff51e6a4e656cda5e94de126e8dfe97d"
+    },
+    {
+      "path": "skills/seminar-settlement/SKILL.md",
+      "sha256": "7737a15393eee995b40280c0879253ecdce229914b34191c116c94c444114998"
+    },
+    {
+      "path": "skills/seminar-settlement/references/workflow.md",
+      "sha256": "669262d764bd9848a7278b26cd99b650a76ba119ec9ac5580ae4126f07d06579"
+    },
+    {
+      "path": "skills/seminar-settlement/scripts/export_codex_dialogue.py",
+      "sha256": "6684c9d38216a1b5110d4efa57c61aa2312b2376e344ccd0118c95baafb9f1ba"
+    },
+    {
+      "path": "skills/vault-column-standards/SKILL.md",
+      "sha256": "ceb013ebc8475062e8b59a45d260a4c3d38457b9bd3c179eb8a47a084f8a2bb7"
+    },
+    {
+      "path": "skills/vault-column-standards/references/columns.json",
+      "sha256": "df831162f639300d2ed33a753870d68af7a481f25bf87e0a94e0b72ed03d8049"
+    },
+    {
+      "path": "skills/vault-daily-brief/SKILL.md",
+      "sha256": "3e29fcd77e1461091f19c5f363d647be453671a9fe1f199ae8f652bd1de48dce"
+    },
+    {
+      "path": "skills/vault-daily-brief/scripts/generate.py",
+      "sha256": "3c03f85eff7277fb2f61d77022de99bab5849a12108b2f526656e572fb0c8db8"
+    },
+    {
+      "path": "skills/video-archive/SKILL.md",
+      "sha256": "166e45ca46950f33d6778ee760e730170aa9398d2168e42210bc3478324ccc14"
+    },
+    {
+      "path": "src/agent_vault/__init__.py",
+      "sha256": "12766cb6283e1be247839a399927573d830d2e670eff012c8737a04203ebf8ef"
+    },
+    {
+      "path": "src/agent_vault/admin.py",
+      "sha256": "f3b747daf1b69746446f6b627ee3c254e9a0e1c4dc990bde74548ee202b92f9c"
+    },
+    {
+      "path": "src/agent_vault/annotations.py",
+      "sha256": "b49bf0fa8b313ebfbf5f6e8f9118802f03caf4f7388929c18cd5bf776a4446b3"
+    },
+    {
+      "path": "src/agent_vault/captures.py",
+      "sha256": "438c4d41c4f680a2a74ccb7afee763d3c654abc1111a3512fb15da1927e2736d"
+    },
+    {
+      "path": "src/agent_vault/channel.py",
+      "sha256": "d9120fbdab1cdf18e80d0e9127d4f00cc1b4fb7212a61f66bd6144bbc629b87b"
+    },
+    {
+      "path": "src/agent_vault/cli.py",
+      "sha256": "88c858aa281673e432fdaac4c1f687ccf1bccafc9ee6401a6e8d603cfc5bfa25"
+    },
+    {
+      "path": "src/agent_vault/core.py",
+      "sha256": "5e08ae114c32be3aace156a0994f2b557d632eaf4d61aba9f98c38df432f03d5"
+    },
+    {
+      "path": "src/agent_vault/integration_docs.py",
+      "sha256": "7fe7958ada721f46893c6412f3c0546a00ca1b0c1bf739d78c53ffe177a3c5f5"
+    },
+    {
+      "path": "src/agent_vault/knowledge.py",
+      "sha256": "8894678ff6037bcbfbe862e9646fd79408c0f4e221f5153d2be25c73039f87f5"
+    },
+    {
+      "path": "src/agent_vault/knowledge_mcp.py",
+      "sha256": "1c8d31ce316c81e79f13c1f7e63823b592e718adb1d4a715897afe6e43c68033"
+    },
+    {
+      "path": "src/agent_vault/legacy.py",
+      "sha256": "55d897f76a57e742a6484dd937520715c181d66a4a3e300077f853fc1408f5b7"
+    },
+    {
+      "path": "src/agent_vault/migration.py",
+      "sha256": "70d370f04f8cd7a70a0fcf2df454f1f3e7a05ebef4b3d8ea34603f66567779e4"
+    },
+    {
+      "path": "src/agent_vault/notes.py",
+      "sha256": "6f1b8432cfcc0168f488692aa2aa217b1feed5ab6b467821ac8efe987312a341"
+    },
+    {
+      "path": "src/agent_vault/production.py",
+      "sha256": "d947b2c3a77b30e0e9e0779a1fab98090e1aab7d15c1f932d860066911966427"
+    },
+    {
+      "path": "src/agent_vault/reader.py",
+      "sha256": "66113ba60b2e3f3866e9e37538c743fb6685c5c8d9a23242023f9e1ef14affd5"
+    },
+    {
+      "path": "src/agent_vault/seminar.py",
+      "sha256": "9a0ecb8a6fedf67766756dc8ad1643f8348f0cb15f6f246c3d66af9aec19ce41"
+    },
+    {
+      "path": "src/agent_vault/seminar_sources.py",
+      "sha256": "904c37bd090471c8b4a04fded283d0047a020b3f01ecdacf87ed1a834f27a6d0"
+    },
+    {
+      "path": "src/agent_vault/skill_registry.py",
+      "sha256": "70cf3d58bc1d469e39dbeec5fce64fd0b19bb19ed2d4a61657124a56221c8768"
+    },
+    {
+      "path": "src/agent_vault/telemetry.py",
+      "sha256": "bc1a9c94dee29702884e035dc2ea1f3d466f9ea0adb74c8a17897852de755cf9"
+    },
+    {
+      "path": "src/agent_vault/tts.py",
+      "sha256": "4b26ead9052704f92df8c6077cbfe820dfba560dcd31918822a3c9f1a39e085c"
+    },
+    {
+      "path": "src/agent_vault/video_sources.py",
+      "sha256": "b632fa04747154da767da0ae4b185d25c07e5a83c62f90e4b93799f7801a0e24"
+    },
+    {
+      "path": "src/agent_vault/web/app-home.html",
+      "sha256": "589d1246753b7060ce91afd7d4d0d69bff957a6e4dd05a49a807de519c37ab5f"
+    },
+    {
+      "path": "src/agent_vault/web/capture-inbox.html",
+      "sha256": "9d1027a9574fe2c03f9f5c4a4160814ef20aa36df15d533df5cfa3cc6d0e7792"
+    },
+    {
+      "path": "src/agent_vault/web/channel.css",
+      "sha256": "828412bf003e995f31ce3066e1657a705b6c767574b9687b4462bf033bc109f7"
+    },
+    {
+      "path": "src/agent_vault/web/channel.html",
+      "sha256": "b236f02758b66ec2224ceb0d24a567171d83e182136d01c547b053fb6407bf78"
+    },
+    {
+      "path": "src/agent_vault/web/channel.js",
+      "sha256": "0869ee878d46c949a12f77ab2dc5b0fe5e3d49d1d01b947e7a79da847bb10004"
+    },
+    {
+      "path": "src/agent_vault/web/html-catalog.js",
+      "sha256": "7bfe570e74cb32ed1f7b61bf9411984a41da46531776fe5de8cc62446b767f52"
+    },
+    {
+      "path": "src/agent_vault/web/integrations.html",
+      "sha256": "a19782b3a49943a133b809596c8e1ad67cadc1346a02b3336bc3be4599355ba8"
+    },
+    {
+      "path": "src/agent_vault/web/knowledge.html",
+      "sha256": "3797d016b18d6784a4b2d63cd285965944270109d3a442ba415fe91bdd592d7f"
+    },
+    {
+      "path": "src/agent_vault/web/reader-link.js",
+      "sha256": "88f423ee34823876eeeac9f2d50a5ac6c853310c49a4dbe9c2086e449a043eaf"
+    },
+    {
+      "path": "src/agent_vault/web/seminar-sources.html",
+      "sha256": "5125664e913726da75c5ddfb97fcaec1dbf65dfd932093d6008c0f58cd63d3ed"
+    },
+    {
+      "path": "src/agent_vault/web/theme.js",
+      "sha256": "bc6a95e0b13875027d43a1d13a1352de4d520ef4379b0f7f534e8a655f00ecbc"
+    },
+    {
+      "path": "src/agent_vault/web/work-shell.css",
+      "sha256": "5c7464a538d818a5199acef51be0aafe70ea749ed3f5c87dd955522afaf93181"
+    }
+  ]
+}

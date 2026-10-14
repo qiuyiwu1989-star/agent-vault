@@ -102,7 +102,7 @@ class Knowledge:
             paths=[]
             for p in sorted(self.root.rglob('*.html')):
                 rel=p.relative_to(self.root)
-                if len(rel.parts)<2 or rel.parts[0] not in ('books','reading','digest','html') or (p.name=='index.html' and len(rel.parts)==2) or self.root.resolve() not in p.resolve().parents:continue
+                if len(rel.parts)<2 or rel.parts[0] not in ('books','reading','digest','html','seminar','video') or (p.name=='index.html' and len(rel.parts)==2) or self.root.resolve() not in p.resolve().parents:continue
                 paths.append(p)
             fp=tuple((str(p),p.stat().st_mtime_ns,p.stat().st_size) for p in paths+([self.builders] if self.builders.exists() else []))
             if fp==self._fingerprint:return self._docs
@@ -113,7 +113,17 @@ class Knowledge:
                 if h in seen:
                     duplicate+=1;seen[h].setdefault('alternate_urls',[]).append('/vault/'+quote(rel));continue
                 ds=editorial_date(p.name,text)
-                docs.append(dict(id='vault-'+digest(rel)[:24],title=html.unescape(re.sub('<[^>]+>','',title[1])).strip() if title else p.stem,text=text,hash=h,url='/vault/'+quote(rel),collection=rel.split('/')[0],kind='fulltext',date=ds,links=[u for u in links if safe_url(u)],summary=self.summary(text),trust=self.trust(text),tags=self.tags(text)))
+                meta={}
+                if rel.split('/')[0]=='seminar':
+                    m=re.search(r'<script\b[^>]*id=["\']vault-seminar-metadata["\'][^>]*>(.*?)</script>',src,re.S|re.I)
+                    if m:
+                        try:
+                            candidate=json.loads(m[1])
+                            if isinstance(candidate,dict) and candidate.get('content_type')=='seminar_settlement':meta=candidate
+                        except (ValueError,TypeError):pass
+                    try:ds=date.fromisoformat(meta.get('date','')).isoformat()
+                    except (ValueError,TypeError):pass
+                docs.append(dict(id='vault-'+digest(rel)[:24],title=html.unescape(re.sub('<[^>]+>','',title[1])).strip() if title else p.stem,text=text,hash=h,url='/vault/'+quote(rel),collection=rel.split('/')[0],kind='fulltext',date=ds,links=[u for u in links if safe_url(u)],summary=meta.get('summary',self.summary(text)),trust=('研讨与后续人机讨论，含待验证提炼' if rel.split('/')[0]=='seminar' else self.trust(text)),tags=meta.get('tags',self.tags(text))))
                 seen[h]=docs[-1]
             if self.builders.exists():
                 for day,row in json.loads(self.builders.read_text()).items():
