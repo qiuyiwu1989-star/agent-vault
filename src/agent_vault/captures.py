@@ -153,7 +153,8 @@ def handle(handler, connect, method):
     if handler.headers.get('Origin') not in (None,'https://qiuyiwu.com'):
         handler.reply(403,{'error':'来源不允许'}); return True
     is_device=device(handler)
-    allowed=is_device or ((method=='GET' or handler.headers.get('Origin')=='https://qiuyiwu.com') and handler.authenticated())
+    public_read = method=='GET' and (path=='/vault/inbox/' or path in (PREFIX+'captures',PREFIX+'notes') or re.fullmatch(PREFIX+r'(?:captures|image|thumbnail)/[a-f0-9]{64}',path) or re.fullmatch(PREFIX+r'notes/[0-9a-fA-F-]{36}',path))
+    allowed=public_read or is_device or ((method=='GET' or handler.headers.get('Origin')=='https://qiuyiwu.com') and handler.authenticated())
     if not allowed:
         if path=='/vault/inbox/':
             handler.send_response(302); handler.send_header('Location','/admin/login.html?next=/vault/inbox/'); handler.send_header('Cache-Control','no-store');handler.end_headers()

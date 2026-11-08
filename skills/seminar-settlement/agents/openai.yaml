@@ -1,0 +1,4 @@
+interface:
+  display_name: "研讨沉淀"
+  short_description: "将研讨与后续人机讨论整理成可阅读文章，提炼方法并写回知行档案"
+  default_prompt: "使用 $seminar-settlement，结合这份研讨转写和我们的后续讨论，整理研讨沉淀文章并按我的要求归档。"

@@ -45,3 +45,27 @@ html[data-theme="light"]{color-scheme:light}html[data-theme="dark"]{color-scheme
 #vault-versioned-docs .doc-grid a{display:block;font-weight:600;line-height:1.6}#vault-versioned-docs small{display:block;margin-top:8px;color:var(--v-ink3)}
 @media(max-width:700px){.vault-home .channel-hero{padding-top:24px}.vault-home .channel-toolbar{display:flex;flex-direction:column;align-items:stretch}.vault-home .channel-search{width:100%;order:-1}.vault-home .channel-filters{display:flex;flex-wrap:wrap}.vault-channel .vn-brand span{display:none}}
 @media(prefers-reduced-motion:reduce){.vault-channel *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+/* Catalog quality · 2026-10-14: shared hierarchy without changing artifact bodies. */
+.vault-home .vault-tile h2{font-size:20px;line-height:1.6;overflow-wrap:anywhere;margin:12px 0}
+.vault-home .tile-summary{font-size:14px;line-height:1.85;color:var(--v-ink2);margin:12px 0}
+.vault-home .tile-top{align-items:flex-start;gap:12px;flex-wrap:wrap}
+.vault-home .tile-top time{font-size:11px;line-height:1.7}
+.vault-home .tile-tags{display:flex;gap:6px;flex-wrap:wrap}
+.vault-home .tile-tags span{font-size:11px;line-height:1.6;padding:3px 8px}
+.vault-home .tile-bottom{align-items:flex-end;gap:14px}
+.vault-home .tile-bottom>span{font-size:11px;line-height:1.7;max-width:65%;overflow-wrap:anywhere}
+.vault-home .tile-bottom>a{white-space:nowrap}
+@media(max-width:700px){.vault-home .vault-tile h2{font-size:18px}.vault-home .tile-bottom{flex-wrap:wrap}.vault-home .tile-bottom>span{max-width:100%}}
+/* Read the chronological sequence across each row, rather than down masonry columns. */
+.vault-home .waterfall{columns:auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px;align-items:stretch}
+.vault-home .vault-tile{display:flex;flex-direction:column;box-sizing:border-box;margin:0;min-width:0}
+.vault-home .tile-content{flex:1}.vault-home .tile-bottom{margin-top:auto}
+.vault-nav .vn-inner{box-sizing:border-box}.vault-nav .vn-links{min-width:0}
+@media(max-width:1450px){.vault-nav .vn-inner{flex-wrap:wrap}.vault-nav .vn-links{order:3;flex-basis:100%;overflow:auto}.vault-nav .vn-brand span{display:none}}
+@media(min-width:1600px){.vault-home .waterfall{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:1000px){.vault-home .waterfall{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.vault-home .waterfall{grid-template-columns:minmax(0,1fr)}}
+
+.vault-collection .channel-hero{padding-top:12px;padding-bottom:12px;margin-bottom:20px}.vault-collection .channel-hero h1{font-size:36px}.vault-collection .channel-hero .eyebrow{display:none}
+@media(max-width:650px){.vault-collection .channel-hero{gap:16px}.vault-collection .channel-hero h1{font-size:28px}.vault-collection .channel-hero p{font-size:13px}.vault-collection .hero-total{font-size:34px}}
