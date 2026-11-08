@@ -22,6 +22,7 @@ def source(text):
     return {'source_platform':platform(url),'source_url':url,'source_account':''}
 def decorate(text,path,root):
     if path not in ('/vault/video/','/vault/video/index.html'):return text
+    if '<div class="grid">' not in text:return text
     def card(m):
         opening,href,body=m.group(1,2,3)
         p=(Path(root)/'video'/unquote(urlsplit(href).path)).resolve()

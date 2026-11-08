@@ -67,7 +67,8 @@ def agent(h):
 def handle(h,method,csrf,lookup):
  u=urlsplit(h.path);prefix='/api/inside/vault/seminar-sources/';page=u.path=='/admin/vault/seminar-sources'
  if not page and not u.path.startswith(prefix):return False
- if not owner(h):h.reply(403,{'error':'仅本人登录后可查看原始资料'});return True
+ public_read=method=='GET' and (page or u.path[len(prefix):] in ('status','messages','transcript'))
+ if not public_read and not owner(h):h.reply(403,{'error':'仅本人登录后可操作'});return True
  try:
   q=parse_qs(u.query);doc=valid_doc(q.get('id',[''])[0]);record=lookup(doc)
   if record.get('collection')!='seminar':raise ValueError('该文档不是研讨')
@@ -94,7 +95,7 @@ def handle(h,method,csrf,lookup):
  except (ValueError,KeyError,TypeError) as e:h.reply(400,{'error':str(e)})
  return True
 
-FOOTER='''<section id="seminar-source-entry" hidden style="max-width:900px;margin:32px auto;padding:24px;border-top:1px solid #ddd"><h2>研讨原始资料</h2><p>保留当时的提问、回答与后续补充，仅本人登录可查看。</p><a id="seminar-source-link">查看原始对话与追加记录 →</a></section><script>(async()=>{const doc=location.pathname.split('/').pop().replace(/\\.html$/,'');if(!/^doc-[A-Za-z0-9_-]+$/.test(doc))return;try{const r=await fetch('/api/inside/vault/seminar-sources/status?id='+encodeURIComponent(doc),{credentials:'same-origin'});if(!r.ok)return;const a=document.getElementById('seminar-source-link');a.href='/admin/vault/seminar-sources?id='+encodeURIComponent(doc);document.getElementById('seminar-source-entry').hidden=false}catch(e){}})();</script>'''
+FOOTER='''<section id="seminar-source-entry" hidden style="max-width:900px;margin:32px auto;padding:24px;border-top:1px solid #ddd"><h2>研讨原始资料</h2><p>保留当时的提问、回答与后续补充，公开阅读。</p><a id="seminar-source-link">查看原始对话与追加记录 →</a></section><script>(async()=>{const doc=location.pathname.split('/').pop().replace(/\\.html$/,'');if(!/^doc-[A-Za-z0-9_-]+$/.test(doc))return;try{const r=await fetch('/api/inside/vault/seminar-sources/status?id='+encodeURIComponent(doc),{credentials:'same-origin'});if(!r.ok)return;const a=document.getElementById('seminar-source-link');a.href='/admin/vault/seminar-sources?id='+encodeURIComponent(doc);document.getElementById('seminar-source-entry').hidden=false}catch(e){}})();</script>'''
 def decorate(content,path):
  if re.fullmatch(r'/vault/seminar/doc-[A-Za-z0-9_-]+\.html',path) and 'id="seminar-source-entry"' not in content:return content.replace('</body>',FOOTER+'</body>')
  return content

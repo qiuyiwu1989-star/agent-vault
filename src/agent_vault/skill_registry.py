@@ -22,10 +22,10 @@ def page(ident=None):
     rows=listing()
     if ident:
         r=get(ident)
-        body='<h1>'+escape(r['name'])+'</h1><p>版本 '+escape(r['version'])+' · <a href="'+r['source_url']+'">读取 SKILL.md</a></p><p><a href="/vault/seminar/">进入研讨沉淀 →</a></p><details open><summary>整理方法</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">'+escape(r['instructions'])+'</pre></details><details><summary>工作流程与输出约定</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">'+escape(r['workflow'])+'</pre></details>'
+        body='<h1>'+escape(r['name'])+'</h1><p>版本 '+escape(r['version'])+' · <a href="'+r['source_url']+'">读取 SKILL.md</a></p><p><a href="/vault/">浏览知识档案 →</a></p><details open><summary>整理方法</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">'+escape(r['instructions'])+'</pre></details><details><summary>工作流程与输出约定</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">'+escape(r['workflow'])+'</pre></details>'
     else:
         body='<h1>Skill 库</h1><p>让每个栏目背后的整理方法可以阅读，也可以交给 AI 调用。</p>'+''.join('<section><h2><a href="'+r['url']+'">'+escape(r['name'])+'</a></h2><p>'+escape(r['description'])+'</p><p>版本 '+r['version']+' · <a href="'+r['source_url']+'">SKILL.md</a></p></section>' for r in rows)
-    return '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Skill 库 · 知行档案</title></head><body><main style="max-width:900px;margin:40px auto;padding:0 24px"><p><a href="/vault/">知行档案</a> / <a href="/vault/skills/">Skill 库</a></p>'+body+'<p>AI 接入：通过 vault_list_skills 查看目录，通过 vault_get_skill 按 id 或栏目链接读取。获取方法不代表获得公开发布授权。</p></main></body></html>'
+    return '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+escape(get(ident)['name'] if ident else 'Skill 库')+' · 知行档案</title></head><body><main style="max-width:900px;margin:40px auto;padding:0 24px">'+body+'<p>AI 接入：通过 vault_list_skills 查看目录，通过 vault_get_skill 按 id 或栏目链接读取。获取方法不代表获得公开发布授权。</p></main></body></html>'
 
 # column-standards-v1: retain all existing registry behavior.
 _previous_listing = listing

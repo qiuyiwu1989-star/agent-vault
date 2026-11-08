@@ -10,11 +10,14 @@ from psycopg2.extras import Json
 from .admin import ADMIN
 from .video_sources import decorate as decorate_video, source as video_source
 from .tts import synthesize
-from . import integration_docs, captures, seminar_sources
+from . import integration_docs, captures, seminar_sources, archive_transport
+from .archive_store import ArchiveStore
+from .presentation import repair_presentation, validate_public_html
 from .annotations import AnnotationStore, AnnotationError
 from .channel import render_channel
 from .core import page, render_body
-from .knowledge import Knowledge
+from .knowledge import Knowledge, extract as KNOWLEDGE_EXTRACT
+def KNOWLEDGE_TEXT(s):return KNOWLEDGE_EXTRACT(s)[0]
 from .knowledge_mcp import rpc
 from .seminar import collection_page, validate as validate_seminar, fingerprint, public_metadata, embed_metadata
 ROOT=Path(os.environ.get('VAULT_SITE','/var/www/html/vault')).resolve()
@@ -40,7 +43,10 @@ def atomic(p,b):
 def connect():return psycopg2.connect(DSN)
 KNOWLEDGE=Knowledge(connect,ROOT,os.environ.get("VAULT_BUILDERS_INDEX","/var/www/html/data/ai-builders-digest/index.json"))
 ANNOTATIONS=AnnotationStore(connect,{"vault": lambda ident: (lambda d: d if d["kind"]=="fulltext" and d["url"].startswith("/vault/") else None)(KNOWLEDGE.document(ident))})
+ARCHIVES=ArchiveStore(connect)
+
 def init():
+    if archive_transport.enabled(): ARCHIVES.init()
     with connect() as db,db.cursor() as c:
         c.execute('CREATE TABLE IF NOT EXISTS documents(id text PRIMARY KEY,path text UNIQUE NOT NULL,published integer NOT NULL DEFAULT 0); CREATE TABLE IF NOT EXISTS revisions(id text REFERENCES documents(id),revision integer,record jsonb NOT NULL,created timestamptz DEFAULT now(),PRIMARY KEY(id,revision)); CREATE TABLE IF NOT EXISTS publications(id bigserial PRIMARY KEY,document text,revision integer,before_bytes bytea,after_hash text,state text,created timestamptz DEFAULT now());')
     scan();KNOWLEDGE.init();ANNOTATIONS.init();captures.init(connect)
@@ -117,6 +123,7 @@ def publish(ident,revision):
             if published==revision and before is not None:return get(ident)
             if (sha(before) if before is not None else None)!=r['base_hash']:raise ValueError('线上文件已被外部更新，拒绝覆盖')
             body=r['content']
+            if r['kind']=='html':validate_public_html(body)
             if r['collection']=='seminar':body=embed_metadata(body,r.get('metadata',{}))
             if r['kind']=='html':body=re.sub(r'<title[^>]*>.*?</title>',lambda m:'<title>'+html.escape(r['title'])+'</title>',body,count=1,flags=re.S|re.I)
             out=(body if r['kind']=='html' else page(r['title'],'<a href="/vault/">返回成果库</a><h1>'+html.escape(r['title'])+'</h1>'+render_body(r['content']))).encode()
@@ -169,8 +176,13 @@ def public_catalog():
         except ValueError:continue
         t=p.read_text();m=re.search(r'<title[^>]*>(.*?)</title>',t,re.S|re.I)
         info=metadata.get('/vault/'+rel,{})
+        editorial_path=Path(os.environ.get('VAULT_EDITORIAL','/var/lib/agent-vault/catalog-editorial.json'))
+        ed=json.loads(editorial_path.read_text()).get(rel,{}) if editorial_path.exists() else {}
+        if ed.get('content_hash')!=hashlib.sha256(KNOWLEDGE_TEXT(t).encode()).hexdigest():ed={}
+        if ed.get('directory_only') or ed.get('duplicate_of'):continue
         provenance=video_source(t) if rel.startswith('video/') else {}
-        result.append(dict(**provenance,date=info.get('date'),summary=info.get('summary',''),tags=info.get('tags',[]),trust=info.get('trust',''),title=html.unescape(re.sub('<[^>]+>','',m[1])).strip() if m else p.stem,collection=rel.split('/')[0],url='/vault/'+quote(rel),reader_url='/admin/vault/read?url='+quote('/vault/'+rel,safe=''),modified=p.stat().st_mtime))
+        provenance['date_label']=info.get('date_label','文稿日期')
+        result.append(dict(**provenance,date=info.get('date'),summary=info.get('summary',''),tags=info.get('tags',[]),trust=info.get('trust',''),title=info.get('title') or (html.unescape(re.sub('<[^>]+>','',m[1])).strip() if m else p.stem),collection=rel.split('/')[0],url='/vault/'+quote(rel),reader_url='/admin/vault/read?url='+quote('/vault/'+rel,safe=''),modified=p.stat().st_mtime))
     return sorted(result,key=lambda r:r['modified'],reverse=True)
 LIBRARY="""<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Vault · 成果库</title><style>body{background:#faf8f3;color:#292623;font:16px/1.7 system-ui;max-width:1080px;margin:40px auto;padding:0 24px}nav{display:flex;gap:18px;flex-wrap:wrap}a{color:#854530}h1{font-size:42px;margin-bottom:8px}input,select{font:inherit;padding:10px;border:1px solid #ddd;border-radius:8px;background:white}input{width:min(55%,540px)}#list{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-top:24px}article{border:1px solid #ddd;border-radius:10px;background:white;padding:20px}small{display:block;color:#777}article a{font-size:18px;text-decoration:none}</style><nav><a href="/">邱懿武</a><a href="/admin/vault/">管理成果</a><a href="/admin/vault/read">阅读笔记</a><a href="/vault/analytics.html">归档看板</a><a href="/admin/vault/insights">跨文章洞察</a><a href="/admin/vault/brief">每日简报</a></nav><h1>Vault · 成果库</h1><p>阅读、榨书、日报与 HTML 作品，持续整理，随时回看。</p><input id="q" placeholder="搜索标题…" aria-label="搜索标题"><select id="collection" aria-label="集合"><option value="">全部集合</option><option value="books">榨书档案</option><option value="reading">阅读档案</option><option value="digest">日报</option><option value="video">视频档案</option><option value="html">HTML 成果</option></select><p id="count">加载中…</p><div id="list"></div><script>let rows=[];const q=document.querySelector('#q'),c=document.querySelector('#collection');function draw(){let found=rows.filter(x=>(!c.value||x.collection===c.value)&&x.title.toLowerCase().includes(q.value.toLowerCase()));document.querySelector('#count').textContent=found.length+' 份成果';const list=document.querySelector('#list');list.replaceChildren();for(const x of found){let a=document.createElement('a');a.href=x.url;a.textContent=x.title;let s=document.createElement('small');s.textContent=x.collection;let card=document.createElement('article');card.append(s,a);const r=document.createElement('a');r.href=x.reader_url;r.textContent='划线 · 笔记';r.style.cssText='display:block;font-size:13px;margin-top:12px';card.append(r);list.append(card)}}q.oninput=c.onchange=draw;fetch('/vault/catalog.json').then(r=>{if(!r.ok)throw Error();return r.json()}).then(x=>{rows=x;draw()}).catch(()=>document.querySelector('#count').textContent='暂时无法加载，请稍后刷新');</script></html>"""
 def append_seminar_sources(args):
@@ -181,7 +193,16 @@ def append_seminar_sources(args):
 class Handler(BaseHTTPRequestHandler):
     def reply(self,status,obj,ctype='application/json; charset=utf-8'):
         if isinstance(obj,str) and ctype.startswith('text/html'):
-            obj=render_channel(obj,urlsplit(self.path).path)
+            path=urlsplit(self.path).path
+            if re.fullmatch(r'/vault/(?:books|reading|digest|html|seminar|video)/.+\.html',path) and not re.fullmatch(r'/vault/[^/]+/index\.html',path):
+                try:
+                    d=KNOWLEDGE.document_url(path)
+                    obj=re.sub(r'<title[^>]*>.*?</title>',lambda m:'<title>'+html.escape(d['title'])+'</title>',obj,count=1,flags=re.S|re.I)
+                    panel='<details class="vault-record-info" style="box-sizing:border-box;max-width:1000px;margin:20px auto;padding:14px 24px;border:1px solid #aaa5;border-radius:8px;font:14px/1.8 system-ui;overflow-wrap:anywhere"><summary>档案信息 · '+html.escape(d.get('trust','已归档'))+'</summary><p><strong>'+html.escape(d['title'])+'</strong></p><p>'+html.escape(d.get('summary',''))+'</p><p>'+html.escape(' · '.join(d.get('tags',[])))+'</p></details>'
+                except ValueError:panel=''
+            else:panel=''
+            obj=render_channel(obj,path,archive_enabled=archive_transport.enabled())
+            if panel and 'id="vault-book-metadata"' not in obj:obj=obj.replace('</nav>','</nav>'+panel,1)
             obj=decorate_video(obj,urlsplit(self.path).path,ROOT)
             obj=seminar_sources.decorate(obj,urlsplit(self.path).path)
         b=obj if isinstance(obj,bytes) else (obj if isinstance(obj,str) else json.dumps(obj,ensure_ascii=False)).encode();self.send_response(status)
@@ -213,6 +234,9 @@ class Handler(BaseHTTPRequestHandler):
         return None
     def agent_allowed(self):return self.agent_scope() is not None
     def do_GET(self):
+        if archive_transport.handle(self,ARCHIVES,"GET",knowledge=KNOWLEDGE): return
+        from .public_collection import handle as public_collection_handle
+        if public_collection_handle(self,connect): return
         if seminar_sources.handle(self,"GET",TOKEN,get): return
         if captures.handle(self,connect,"GET"): return
         asset=urlsplit(self.path).path
@@ -225,7 +249,7 @@ class Handler(BaseHTTPRequestHandler):
         }
         if asset in sdk_assets:
             return self.reply(200,(Path(__file__).parents[2]/sdk_assets[asset]).read_text(),'application/javascript; charset=utf-8')
-        if asset in ('/vault/channel.css','/vault/channel.js','/vault/work-shell.css','/vault/theme.js'):
+        if asset in ('/vault/channel.css','/vault/channel.js','/vault/work-shell.css','/vault/theme.js','/vault/system.css','/vault/system.js','/vault/book-reader.css'):
             return self.reply(200,(Path(__file__).parent/'web'/asset.rsplit('/',1)[1]).read_text(),'text/css; charset=utf-8' if asset.endswith('.css') else 'application/javascript; charset=utf-8')
         if asset=='/api/inside/annotations/v1/session':
             owner=self.annotation_owner()
@@ -253,16 +277,33 @@ class Handler(BaseHTTPRequestHandler):
             if asset=='/vault/skills/catalog.json':return self.reply(200,listing())
             if asset=='/vault/skills/seminar-settlement/SKILL.md':return self.reply(200,get_skill('seminar-settlement')['instructions'],'text/plain; charset=utf-8')
             if asset=='/vault/skills/seminar-settlement/':return self.reply(200,page('seminar-settlement'),'text/html; charset=utf-8')
+            for entry in listing():
+                if asset in (entry['url'],entry['url']+'index.html'):return self.reply(200,page(entry['id']),'text/html; charset=utf-8')
             return self.reply(404,{'error':'Skill not found'})
+        if asset in ('/vault/books/','/vault/books/index.html'):
+            return self.reply(200,(Path(__file__).parent/'web/books-shelf.html').read_text(),'text/html; charset=utf-8')
+        archived=re.fullmatch(r'/vault/books/original/([a-f0-9]{24})\.html',asset)
+        if archived:
+            p=Path('/var/lib/agent-vault/book-originals')/(archived[1]+'.html')
+            if not p.is_file():return self.reply(404,{'error':'旧稿不存在'})
+            content=p.read_text()
+            current=next((r for r in public_catalog() if r['collection']=='books' and archived[1] in (ROOT/unquote(r['url'][len('/vault/'):])).read_text()),None)
+            current_link=('<a href="'+html.escape(current['url'],quote=True)+'">查看当前压缩稿 →</a> · ') if current else ''
+            banner='<aside style="box-sizing:border-box;padding:16px 24px;background:#eee8da;color:#27271f;font:14px/1.8 system-ui">重压缩前的旧档案 · 保留原始表述供核对。'+current_link+'<a style="color:#7c3f2c" href="/vault/books/">返回深度读书 →</a></aside>'
+            content=re.sub(r'(<body[^>]*>)',lambda m:m[1]+banner,content,count=1,flags=re.I)
+            return self.reply(200,content.encode(),'text/html; charset=utf-8')
+        if re.fullmatch(r'/vault/(?:books|reading|digest|html|seminar|video)/(?:index.html)?',asset):
+            return self.reply(200,(Path(__file__).parent/'web/channel.html').read_text(),'text/html; charset=utf-8')
         if asset in ('/vault/seminar/','/vault/seminar/index.html'):return self.reply(200,collection_page(),'text/html; charset=utf-8')
-        if self.path=='/vault/':return self.reply(200,(Path(__file__).parent/'web/channel.html').read_text(),'text/html; charset=utf-8')
-        if self.path=='/vault/catalog.json':return self.reply(200,public_catalog())
+        if asset in ('/vault/','/vault/index.html'):return self.reply(200,(Path(__file__).parent/'web/channel.html').read_text(),'text/html; charset=utf-8')
+        if asset=='/vault/catalog.json':return self.reply(200,public_catalog())
         if re.fullmatch(r'/vault/(?:books|reading|digest|html|seminar|video)/(?:.*\.html)?',asset) or asset=='/vault/analytics.html':
             rel=unquote(asset[len('/vault/'):])
             if rel.endswith('/'):rel+='index.html'
             target=(ROOT/rel).resolve()
             if not target.is_relative_to(ROOT.resolve()) or not target.is_file() or target.suffix!='.html':return self.reply(404,{'error':'not found'})
             content=target.read_text()
+            content=repair_presentation(content,asset)
             if rel=='html/index.html' and '/vault/html-catalog.js' not in content:content=content.replace('</body>','<script src="/vault/html-catalog.js"></script></body>')
             return self.reply(200,content,'text/html; charset=utf-8')
         if not self.authenticated():return self.reply(401,{'error':'请先登录后台'})
@@ -282,10 +323,10 @@ class Handler(BaseHTTPRequestHandler):
                 if action=='session':return self.reply(200,{'token':TOKEN})
                 if action=='search':return self.reply(200,KNOWLEDGE.search(arg('q'),250))
                 if action=='read':return self.reply(200,KNOWLEDGE.document(arg('id')) if arg('id') else KNOWLEDGE.document_url(arg('url')))
-                if action=='notes':return self.reply(200,KNOWLEDGE.notes(arg('doc_id') or None))
+                if action=='notes':return self.reply(200,KNOWLEDGE.notes(arg('doc_id') or None,owner=self.annotation_owner()))
                 if action=='related':return self.reply(200,KNOWLEDGE.related(arg('id')))
-                if action=='analytics':return self.reply(200,KNOWLEDGE.analytics(arg('start'),arg('end'),arg('collection')))
-                if action=='brief':return self.reply(200,KNOWLEDGE.brief(arg('day') or None))
+                if action=='analytics':return self.reply(200,KNOWLEDGE.analytics(arg('start'),arg('end'),arg('collection'),owner=self.annotation_owner()))
+                if action=='brief':return self.reply(200,KNOWLEDGE.brief(arg('day') or None,owner=self.annotation_owner()))
                 if action=='integration-doc':return self.reply(200,integration_docs.document(arg('id')),'text/plain; charset=utf-8')
                 if action=='brief-audio':
                     day=arg('day')
@@ -314,6 +355,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(200,ANNOTATIONS.update(owner,*parts,json.loads(self.rfile.read(n))))
         except (AnnotationError,ValueError,TypeError) as e:return self.reply(409,{'error':str(e)})
     def do_POST(self):
+        if archive_transport.handle(self,ARCHIVES,"POST",knowledge=KNOWLEDGE): return
         if seminar_sources.handle(self,"POST",TOKEN,get): return
         if captures.handle(self,connect,"POST"): return
         if self.annotation_path():
@@ -345,7 +387,7 @@ class Handler(BaseHTTPRequestHandler):
             if self.path=='/api/inside/vault/knowledge/tts':return self.reply(200,synthesize(d.get('text')))
             if self.path=='/api/inside/vault/knowledge/note-save':return self.reply(200,KNOWLEDGE.note_save(d))
             if self.path=='/api/inside/vault/knowledge/entity-save':return self.reply(200,KNOWLEDGE.entity_save(d))
-            if self.path=='/api/inside/vault/knowledge/pack':return self.reply(200,KNOWLEDGE.pack(d['ids'],d.get('include_notes') is True))
+            if self.path=='/api/inside/vault/knowledge/pack':return self.reply(200,KNOWLEDGE.pack(d['ids'],d.get('include_notes') is True,owner=self.annotation_owner()))
             if self.path.endswith('/save'):return self.reply(200,save(d))
             if self.path.endswith('/publish'):return self.reply(200,publish(d['id'],int(d['revision'])))
             self.reply(404,{'error':'not found'})
